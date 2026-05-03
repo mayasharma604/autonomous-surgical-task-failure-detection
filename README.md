@@ -2,12 +2,6 @@
 
 This project utilizes deep learning architectures to automate the detection of five distinct failure modes in endoscopic surgical videos: **Collision, Task Completion, Smoke Detection, Incomplete Cut, and Tension**.
 
-## Important: Repository & Data Constraints
-**The source code in this repository cannot be executed locally.** 
-*   **Data Size:** The endoscopic video datasets and annotation files are too large for GitHub storage. 
-*   **Compute Environment:** All training and inference were performed by SSHing into the **jhu-aliss** server, which provided the necessary GPU resources for high-compute models like **EfficientNet-V2-M** and **Vision Transformers (ViT)**.
-*   **Missing Artifacts:** Consequently, the trained model weights (`.pth` files), specific image labeling info, and large-scale annotation files are hosted externally on the JHU server and are not included in this repo.
-
 ---
 
 ## Technical Approach
@@ -37,3 +31,10 @@ The model achieved high reliability in safety-critical classification tasks, whi
 *   **Expanded Dataset Training**: Improve model robustness and reduce generalization gaps by curating a larger, more diverse dataset of endoscopic frames.
 *   **Multi-Modal Sensor Fusion**: Integrate robotic kinematic data with video features to provide physical context for tasks like **Tension** and **Incomplete Cut**.
 *   **Lifelong Learning GUI**: Develop an interactive interface for clinicians to flag misclassifications in real-time, allowing for continuous model refinement on the server.
+
+
+## Important: Repository & Data Constraints
+**The source code in this repository cannot be executed locally.** 
+*   **Data Size:** The endoscopic video datasets and annotation files are too large for GitHub storage. 
+*   **Compute Environment:** All training and inference were performed by SSHing into the **jhu-aliss** server, which provided the necessary GPU resources for high-compute models like **EfficientNet-V2-M** and **Vision Transformers (ViT)**.
+*   **Missing Artifacts:** Consequently, the trained model weights (`.pth` files), specific image labeling info, and large-scale annotation files are hosted externally on the JHU server and are not included in this repo.
