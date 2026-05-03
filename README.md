@@ -35,6 +35,6 @@ The model achieved high reliability in safety-critical classification tasks, whi
 
 ## Important: Repository & Data Constraints
 **The source code in this repository cannot be executed locally.** 
-*   **Data Size:** The endoscopic video datasets and annotation files are too large for GitHub storage. 
+*   **Data Size:** The endoscopic video datasets and annotation files are too large for GitHub storage. If needed, please contact Dr. Nural Yilmaz (nyilmaz2@jhu.edu) for access.
 *   **Compute Environment:** All training and inference were performed by SSHing into the **jhu-aliss** server, which provided the necessary GPU resources for high-compute models like **EfficientNet-V2-M** and **Vision Transformers (ViT)**.
-*   **Missing Artifacts:** Consequently, the trained model weights (`.pth` files), specific image labeling info, and large-scale annotation files are hosted externally on the JHU server and are not included in this repo.
+*   **Missing Artifacts:** Consequently, the trained model weights (`.pth` files), specific image labeling info, and large-scale annotation files are hosted externally on the JHU server and are not included in this repo. However, they can be accessed through this shared link: https://livejohnshopkins-my.sharepoint.com/:f:/g/personal/msharm45_jh_edu/IgBU92QFDksHSpTzlIWHY7-YAXXK1FPmTwQ17FbG3dggjlA?e=HEvxGU 
