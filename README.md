@@ -8,7 +8,7 @@ This project utilizes deep learning architectures to automate the detection of f
 The pipeline followed a four-stage process to move from raw video to validated inference:
 
 1.  **Data Acquisition & Annotation**: Images were extracted from endoscopic video frames and annotated across the five failure modes.
-2.  **Overfit & Leakage Mitigation**: To address a $14.68\%$ generalization gap in initial trials, we implemented **randomized trial splits**, **residual auto-encoding**, and multiple **preprocessing** (normalization, resizing) techniques.
+2.  **Overfit & Leakage Mitigation**: To address a generalization gap in initial trials, we implemented **randomized trial splits**, **residual auto-encoding**, and multiple **preprocessing** (normalization, resizing) techniques.
 3.  **Model Benchmarking**: We trained and compared **ResNet, ViT, EfficientNet-B0**, and **EfficientNet-V2-M** to identify the optimal architecture for surgical failure detection.
 4.  **Inference Testing**: Final validation was conducted on a holdout dataset using the best-performing model to ensure accuracy on unseen surgical data.
 
