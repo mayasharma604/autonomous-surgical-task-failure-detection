@@ -1,6 +1,3 @@
-autonomous-surgical-task-failure-detection
----
-
 # Autonomous Surgical Task Failure Detection
 
 This project utilizes deep learning architectures to automate the detection of five distinct failure modes in endoscopic surgical videos: **Collision, Task Completion, Smoke Detection, Incomplete Cut, and Tension**.
