@@ -21,7 +21,7 @@ The model achieved high reliability in safety-critical classification tasks, whi
 | :--- | :---: | :---: | :---: | :---: | :--- |
 | **Collision** | 99.78 | 85.10 | 0.84 | 0.92 | **96.31% Accuracy** |
 | **Tension** | 99.80 | 86.23 | 0.94 | 0.78 | **86.00% Accuracy** |
-| **Smoke Detection** |  |  |  |  |  |
+| **Smoke Detection** | 99.82 | 100 | 1 | 1 | **84.96% Accuracy** |
 | **Task Completion** | 84.09 | 45.00 | 0.66 | 0.52 | **53.01% Accuracy** |
 | **Incomplete Cut** | 99.13 | 99.41 | 0.9934 | 0.9869 | **$r = 0.1326$ (Pearson)** |
 
