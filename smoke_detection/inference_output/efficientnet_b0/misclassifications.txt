@@ -1,0 +1,20 @@
+Misclassification Log — EfficientNet-B0
+======================================================================
+
+FALSE POSITIVES (0) — predicted SMOKE, actually CLEAN
+----------------------------------------------------------------------
+
+FALSE NEGATIVES (12) — predicted CLEAN, actually SMOKE
+----------------------------------------------------------------------
+  P(smoke)= 15.9%  /data/CIS2/smoke_detection/smokeVal/tissue_33_ts3854_frame000028_smoke.png
+  P(smoke)= 16.4%  /data/CIS2/smoke_detection/smokeVal/tissue_32_ts6557_frame000022_smoke.png
+  P(smoke)= 20.7%  /data/CIS2/smoke_detection/smokeVal/tissue_32_ts6652_frame000022_smoke.png
+  P(smoke)= 21.2%  /data/CIS2/smoke_detection/smokeVal/tissue_33_ts8888_frame000042_smoke.png
+  P(smoke)= 21.5%  /data/CIS2/smoke_detection/smokeVal/tissue_33_ts3854_frame000039_smoke.png
+  P(smoke)= 23.7%  /data/CIS2/smoke_detection/smokeVal/tissue_33_ts3854_frame000027_smoke.png
+  P(smoke)= 26.2%  /data/CIS2/smoke_detection/smokeVal/tissue_32_ts1530_frame000045_smoke.png
+  P(smoke)= 27.6%  /data/CIS2/smoke_detection/smokeVal/tissue_33_ts3854_frame000024_smoke.png
+  P(smoke)= 34.5%  /data/CIS2/smoke_detection/smokeVal/tissue_32_ts1505_frame000009_smoke.png
+  P(smoke)= 37.2%  /data/CIS2/smoke_detection/smokeVal/tissue_33_ts8888_frame000050_smoke.png
+  P(smoke)= 40.5%  /data/CIS2/smoke_detection/smokeVal/tissue_33_ts8888_frame000068_smoke.png
+  P(smoke)= 48.3%  /data/CIS2/smoke_detection/smokeVal/tissue_32_ts1505_frame000061_smoke.png

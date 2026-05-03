@@ -1,0 +1,8 @@
+Misclassification Log — ViT-B/16
+======================================================================
+
+FALSE POSITIVES (0) — predicted SMOKE, actually CLEAN
+----------------------------------------------------------------------
+
+FALSE NEGATIVES (0) — predicted CLEAN, actually SMOKE
+----------------------------------------------------------------------
