@@ -1,9 +1,7 @@
 import os
 import pandas as pd
 
-# =========================
-# CONFIGURATION
-# =========================
+# config stuff
 PHASE_ORDER = [
     "2_resect_start",
     "3_resect",
@@ -16,7 +14,7 @@ DATA_ROOT = "/data/virtuoso_cao_demo/tissue_1/"
 MASTER_CSV = "./annotations/resect_continuous_progress.csv"
 
 def generate_continuous_labels():
-    # 1. Get sorted trial list per phase
+    # get sorted list of trials for each phase
     phase_trials = {}
     for phase in PHASE_ORDER:
         phase_path = os.path.join(DATA_ROOT, phase)
@@ -30,12 +28,12 @@ def generate_continuous_labels():
             phase_trials[phase] = []
 
     n_trials = max(len(t) for t in phase_trials.values())
-    print(f"\n🔍 Processing {n_trials} trials matched by sort order.\n")
+    print(f"\n Processing {n_trials} trials matched by sort order.\n")
 
     all_rows = []
 
     for trial_idx in range(n_trials):
-        # 2. Collect ALL frames across all phases for this trial, in phase order
+        # get all frames for this trial through all the phases
         trial_frames = []
         for phase in PHASE_ORDER:
             trials = phase_trials.get(phase, [])
@@ -53,20 +51,20 @@ def generate_continuous_labels():
                             "filename": f,
                         })
 
-        # 3. Assign 0.0 → 0.9 gradually across every frame in this trial
+        # make the progress go from 0.0 to 0.9 across the frames
         total_f = len(trial_frames)
         if total_f == 0:
-            print(f"⚠️  Trial index {trial_idx}: no frames found, skipping.")
+            print(f"Trial index {trial_idx}: no frames found, skipping.")
             continue
 
-        print(f"📈 Trial {trial_idx}: {total_f} total frames → 0.0 to 0.9")
+        print(f"Trial {trial_idx}: {total_f} total frames → 0.0 to 0.9")
         for i, frame in enumerate(trial_frames):
             frame["progress"] = round((i / max(total_f - 1, 1)) * 0.9, 4)
             all_rows.append(frame)
 
-    # 4. Save
+    # save output
     if not all_rows:
-        print("❌ No images were found.")
+        print("No images were found.")
         return
 
     df = pd.DataFrame(all_rows)
@@ -75,7 +73,7 @@ def generate_continuous_labels():
     os.makedirs(os.path.dirname(MASTER_CSV), exist_ok=True)
     df.to_csv(MASTER_CSV, index=False)
 
-    print(f"\n✨ Success! Created {MASTER_CSV}")
+    print(f"\n Success! Created {MASTER_CSV}")
     print("\n--- Sample: first and last 5 rows per trial ---")
     for idx in df["trial_index"].unique():
         sub = df[df["trial_index"] == idx]
