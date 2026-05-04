@@ -135,7 +135,7 @@ best_val_loss = float('inf')
 total_eps = PHASE1_EPOCHS + PHASE2_EPOCHS
 
 # --- PHASE 1 ---
-print("\n🧊 PHASE 1: Training Head Only (ViT Backbone Frozen)")
+print("\n PHASE 1: Training Head Only (ViT Backbone Frozen)")
 for name, param in model.named_parameters():
     if "heads" not in name:
         param.requires_grad = False
@@ -157,7 +157,7 @@ for epoch in range(PHASE1_EPOCHS):
         torch.save(model.state_dict(), MODEL_SAVE_PATH)
 
 # --- PHASE 2 ---
-print("\n🔥 PHASE 2: Full Fine-Tuning (Transformers Unfrozen)")
+print("\nPHASE 2: Full Fine-Tuning (Transformers Unfrozen)")
 for param in model.parameters():
     param.requires_grad = True
 
@@ -176,4 +176,4 @@ for epoch in range(PHASE2_EPOCHS):
     if v_loss < best_val_loss:
         best_val_loss = v_loss
         torch.save(model.state_dict(), MODEL_SAVE_PATH)
-        print("  ⭐ Best Model Saved!")
+        print(" Best Model Saved!")
