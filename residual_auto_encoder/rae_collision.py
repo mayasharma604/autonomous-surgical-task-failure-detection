@@ -8,9 +8,7 @@ import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 import torchvision.transforms as transforms
 
-# =========================
-# 1. Residual Block
-# =========================
+# residual block
 class ResBlock(nn.Module):
     def __init__(self, in_channels, out_channels, stride=1):
         super().__init__()
@@ -33,9 +31,7 @@ class ResBlock(nn.Module):
         out += identity
         return self.relu(out)
 
-# =========================
-# 2. Encoder
-# =========================
+# encoder
 class Encoder(nn.Module):
     def __init__(self):
         super().__init__()
@@ -51,9 +47,7 @@ class Encoder(nn.Module):
         x = self.layer4(x)
         return x
 
-# =========================
-# 3. Decoder
-# =========================
+# decoder
 class Decoder(nn.Module):
     def __init__(self):
         super().__init__()
@@ -72,9 +66,7 @@ class Decoder(nn.Module):
         x = self.up4(x)
         return x
 
-# =========================
-# 4. Residual Autoencoder
-# =========================
+# residual autoencoder class
 class ResidualAutoencoder(nn.Module):
     def __init__(self):
         super().__init__()
@@ -86,12 +78,7 @@ class ResidualAutoencoder(nn.Module):
         out = self.decoder(z)
         return out
 
-# =========================
-# 5. Dataset
-# =========================
-
-
-
+# dataset
 
 class CollisionDataset(Dataset):
     def __init__(self, tissue_dirs, root_dir, transform=None):
@@ -122,9 +109,7 @@ class CollisionDataset(Dataset):
         img = self.transform(img)
         return img, self.image_paths[idx]
 
-# =========================
-# 6. Train / Validation Split
-# =========================
+#  train/val split
 def split_tissues(root_dir, train_ratio=0.7, val_ratio=0.15):
     tissues = [d for d in os.listdir(root_dir) if d.startswith("tissue_")]
     tissues = sorted(tissues)
@@ -137,9 +122,7 @@ def split_tissues(root_dir, train_ratio=0.7, val_ratio=0.15):
     test = tissues[val_end:]
     return train, val, test
 
-# =========================
-# 7. Training Loop
-# =========================
+# training loop
 def train(root_dir="/data/virtuoso_cao_demo", num_epochs=50, batch_size=8, lr=1e-4):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Using device:", device)
@@ -169,9 +152,7 @@ def train(root_dir="/data/virtuoso_cao_demo", num_epochs=50, batch_size=8, lr=1e
     patience_counter = 0
     train_losses, val_losses = [], []
 
-    # =========================
-    # Training
-    # =========================
+    # training
     for epoch in range(num_epochs):
         model.train()
         total_loss = 0
@@ -210,7 +191,7 @@ def train(root_dir="/data/virtuoso_cao_demo", num_epochs=50, batch_size=8, lr=1e
                 print(f"Early stopping at epoch {epoch+1}")
                 break
 
-    # Plot loss curves
+    # plot the loss curves
     plt.plot(train_losses, label="Train")
     plt.plot(val_losses, label="Val")
     plt.xlabel("Epoch")
@@ -235,7 +216,6 @@ def train(root_dir="/data/virtuoso_cao_demo", num_epochs=50, batch_size=8, lr=1e
     threshold = torch.quantile(val_errors, 0.95).item()
     print(f"Anomaly threshold (95th percentile): {threshold:.6f}")
 
-    # ← REPLACE the old torch.save with this
     torch.save({
         "model_state": model.state_dict(),
         "threshold": threshold,
@@ -244,9 +224,7 @@ def train(root_dir="/data/virtuoso_cao_demo", num_epochs=50, batch_size=8, lr=1e
     }, "rae_best.pth")
     print("Saved best model + threshold to rae_best.pth")
 
-    # =========================
-    # 8. Anomaly detection + visualization
-    # =========================
+    # anomaly detection + visualization
     model.eval()
     anomaly_scores = []
     with torch.no_grad():
@@ -256,7 +234,7 @@ def train(root_dir="/data/virtuoso_cao_demo", num_epochs=50, batch_size=8, lr=1e
             error = torch.mean((x - recon) ** 2, dim=(1,2,3))
             anomaly_scores.append((error.item(), paths[0]))
 
-    # Sort by error descending
+    # sort by error descending
     anomaly_scores.sort(reverse=True, key=lambda t: t[0])
     print("Top 5 anomaly frames:")
     for score, path in anomaly_scores[:5]:
