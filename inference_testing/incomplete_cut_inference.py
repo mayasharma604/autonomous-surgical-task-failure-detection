@@ -6,9 +6,7 @@ from PIL import Image
 from torchvision import transforms, models
 from tqdm import tqdm
 
-# =========================
-# Config
-# =========================
+# config
 MODEL_PATH = "/data/CIS2/model_maya/efficient_net_model/best_v2m_incomplete_cut_regression.pth"
 
 # Root for all phases (1_retract, 2_collision, 3_resect, etc.)
@@ -18,9 +16,7 @@ OUTPUT_CSV = "./incomplete_cut_endoscope_only_weights.csv"
 IMG_SIZE = 224
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# =========================
-# Model (EfficientNet-V2-M)
-# =========================
+# model v2m
 model = models.efficientnet_v2_m(weights=None)
 num_ftrs = model.classifier[1].in_features
 model.classifier[1] = nn.Sequential(
@@ -43,25 +39,20 @@ for k, v in state_dict.items():
 model.load_state_dict(new_state_dict)
 model.eval()
 
-print(f"✅ Loaded EfficientNet-V2-M Regression model")
+print(f" Loaded EfficientNet-V2-M Regression model")
 
-# =========================
-# Transforms
-# =========================
+# transforms
 transform = transforms.Compose([
     transforms.Resize((IMG_SIZE, IMG_SIZE)),
     transforms.ToTensor(),
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 ])
 
-# =========================
-# Filtered Folder Inference
-# =========================
+# filtered folder inference
 all_results = []
 
 for root, dirs, files in os.walk(ROOT_INPUT_FOLDER):
-    # 🔑 STRICT FILTER: Only enter folders named 'endoscope'
-    # This ignores 'depth', 'tumor_masks', 'overlay', etc.
+    
     if os.path.basename(root) != "endoscope":
         continue
 
@@ -72,7 +63,7 @@ for root, dirs, files in os.walk(ROOT_INPUT_FOLDER):
     
     # Captures the phase name (e.g., 3_resect) by looking back up the path
     phase_label = os.path.basename(os.path.dirname(os.path.dirname(root)))
-    print(f"\n📂 Found Endoscope Data in: {phase_label}")
+    print(f"\n Found Endoscope Data in: {phase_label}")
 
     with torch.no_grad():
         for fname in tqdm(image_files, desc=f"Weights for {phase_label}"):
@@ -93,19 +84,17 @@ for root, dirs, files in os.walk(ROOT_INPUT_FOLDER):
                 })
                 
             except Exception as e:
-                print(f"⚠️ Error in {path}: {e}")
+                print(f" Error in {path}: {e}")
 
-# =========================
-# Export
-# =========================
+# export
 if all_results:
     df = pd.DataFrame(all_results)
     df.to_csv(OUTPUT_CSV, index=False)
-    print(f"\n✅ Done! Processed all endoscope folders across phases.")
-    print(f"📊 CSV saved: {OUTPUT_CSV}")
+    print(f"\n Done! Processed all endoscope folders across phases.")
+    print(f" CSV saved: {OUTPUT_CSV}")
     
     # Quick view to ensure it's pulling from the right spots
     print("\nPreview:")
     print(df[['phase', 'filename', 'predicted_weight']].head(10).to_string(index=False))
 else:
-    print("❌ No endoscope folders found in the tree.")
+    print(" No endoscope folders found in the tree.")
