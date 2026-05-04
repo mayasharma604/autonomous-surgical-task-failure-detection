@@ -162,7 +162,7 @@ def run_inference(model, loader):
             logits = model(imgs)
             probs  = F.softmax(logits, dim=1)
             preds  = logits.argmax(dim=1).cpu()
-            confs  = probs[:, 1].cpu()          # P(smoke)
+            confs  = probs[:, 1].cpu()         
 
             for path, true, pred, conf in zip(paths, labels, preds, confs):
                 records.append({
@@ -197,11 +197,11 @@ def build_grid(records, error_type, backbone_name, out_dir):
     if error_type == "fp":
         subset = [r for r in records if r["pred_label"] == 1 and r["true_label"] == 0]
         title_str = "False Positives — predicted SMOKE, actually CLEAN"
-        border_color = "#e74c3c"   # red
+        border_color = "#e74c3c"  
     else:
         subset = [r for r in records if r["pred_label"] == 0 and r["true_label"] == 1]
         title_str = "False Negatives — predicted CLEAN, actually SMOKE"
-        border_color = "#e67e22"   # orange
+        border_color = "#e67e22" 
 
     name = DISPLAY_NAMES.get(backbone_name, backbone_name)
     total = len(subset)
@@ -212,9 +212,9 @@ def build_grid(records, error_type, backbone_name, out_dir):
 
     # Sort by confidence distance from decision boundary (most wrong first)
     if error_type == "fp":
-        subset.sort(key=lambda r: r["conf_smoke"], reverse=True)   # highest P(smoke) first
+        subset.sort(key=lambda r: r["conf_smoke"], reverse=True) 
     else:
-        subset.sort(key=lambda r: r["conf_smoke"])                  # lowest P(smoke) first
+        subset.sort(key=lambda r: r["conf_smoke"])              
 
     capped = subset[:MAX_PER_GRID]
     n      = len(capped)
@@ -415,7 +415,7 @@ def main():
     # Build val loader
     print("\n Collecting validation image paths …")
     val_smoke          = collect_smoke_images(VAL_SMOKE_DIR)
-    _, val_clean       = load_csv(VAL_CSV)   # VAL_CSV contains clean frames only
+    _, val_clean       = load_csv(VAL_CSV)
     assert val_smoke,  "No val smoke images — check VAL_SMOKE_DIR."
     assert val_clean,  "No val clean images — check VAL_CSV."
     print(f"  Val: {len(val_smoke)} smoke | {len(val_clean)} clean")
