@@ -7,9 +7,7 @@ from torchvision import transforms
 from torchvision.models import efficientnet_v2_m
 from tqdm import tqdm
 
-# =========================
-# Config
-# =========================
+# config
 MODEL_PATH = "/data/CIS2/model_maya/efficient_net_model/best_effnet_v2m_collision.pth"
 
 # Updated to use the JHU-collision-CAO1 dataset directory
@@ -23,15 +21,11 @@ BAD_DIR = os.path.join(OUTPUT_DIR, "bad")
 IMG_SIZE = 224 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# =========================
-# Create output dirs
-# =========================
+# ceate output dirs
 os.makedirs(GOOD_DIR, exist_ok=True)
 os.makedirs(BAD_DIR, exist_ok=True)
 
-# =========================
-# Model (Adjusted for EfficientNet-V2-M)
-# =========================
+# model effnet v2m
 # Initialize the base V2-M architecture
 model = efficientnet_v2_m(weights=None)
 
@@ -52,9 +46,7 @@ model.eval()
 
 print(f" Loaded EfficientNet-V2-M from {MODEL_PATH}")
 
-# =========================
-# Transforms
-# =========================
+# transforms
 transform = transforms.Compose([
     transforms.Resize((IMG_SIZE, IMG_SIZE)),
     transforms.ToTensor(),
@@ -64,9 +56,7 @@ transform = transforms.Compose([
     )
 ])
 
-# =========================
-# Load images
-# =========================
+# load images
 image_files = sorted([
     f for f in os.listdir(INPUT_FOLDER)
     if f.lower().endswith((".png", ".jpg", ".jpeg"))
@@ -74,9 +64,7 @@ image_files = sorted([
 
 print(f" Found {len(image_files)} images")
 
-# =========================
-# Inference
-# =========================
+# inference
 with torch.no_grad():
     for fname in tqdm(image_files, desc="Running Collision Inference"):
         path = os.path.join(INPUT_FOLDER, fname)
