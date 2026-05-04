@@ -14,9 +14,7 @@ class SqueezeTime(nn.Module):
     def forward(self, x):
         return x.squeeze(1) 
 
-# =========================
-# Config
-# =========================
+# config
 WORKSPACE_ROOT = '/data/tensionData'
 WINDOW_SIZE = 1 
 PREDICT_FRAMES = 1
@@ -27,9 +25,7 @@ IMG_SIZE = 224
 EPOCHS = 10
 DEVICE = tt.setup_device(seed=42)
 
-# =========================
-# Prepare masks & clips
-# =========================
+# prepare masks and clips
 mask_lookup = tt.make_mask_lookup(WORKSPACE_ROOT)
 seg_mask_lookup = tt.make_seg_mask_lookup(WORKSPACE_ROOT)
 
@@ -42,9 +38,7 @@ val_windows = tt.build_windows(val_clips, WINDOW_SIZE, PREDICT_FRAMES)
 train_windows = tt.balance_windows(train_windows, PREDICT_FRAMES)
 val_windows = tt.balance_windows(val_windows, PREDICT_FRAMES)
 
-# =========================
-# Loaders
-# =========================
+# loaders
 train_loader, val_loader, train_ds, val_ds = tt.make_loaders(
     train_windows, val_windows,
     BATCH_SIZE, NUM_WORKERS,
@@ -54,12 +48,10 @@ train_loader, val_loader, train_ds, val_ds = tt.make_loaders(
     dual_stream=True
 )
 
-# =========================
-# Model: EfficientNet-B0
-# =========================
+# training the model
 base_model = efficientnet_b0(weights=None) 
 
-# Modify first conv layer for 6 channels (Dual-stream: RGB + Mask)
+# modify first conv layer for 6 channels
 original_conv = base_model.features[0][0]
 base_model.features[0][0] = nn.Conv2d(
     in_channels=6, 
@@ -70,7 +62,7 @@ base_model.features[0][0] = nn.Conv2d(
     bias=False
 )
 
-# Modify classifier for single-output binary classification
+# modify classifier for single-output binary classification
 num_ftrs = base_model.classifier[1].in_features
 base_model.classifier[1] = nn.Linear(num_ftrs, 1)
 
@@ -79,15 +71,11 @@ model = nn.Sequential(
     base_model
 ).to(DEVICE)
 
-# =========================
-# Optimizer & Scheduler
-# =========================
+# optimizer and scheduler
 optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=2, factor=0.5)
 
-# =========================
-# Training loop
-# =========================
+# training loop
 # early_stop_patience=5 prevents overfitting by stopping if Val Loss stalls
 tt.train(
     model=model,
@@ -103,9 +91,7 @@ tt.train(
     early_stop_patience=5
 )
 
-# =========================
-# FINAL METRICS EVALUATION
-# =========================
+# final metrics eval
 print("\n" + "="*40)
 print("REPORTING FINAL METRICS FROM BEST MODEL")
 print("="*40)
