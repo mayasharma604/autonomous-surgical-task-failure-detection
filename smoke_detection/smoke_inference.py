@@ -34,9 +34,7 @@ from sklearn.metrics import (
     roc_auc_score, roc_curve, confusion_matrix, ConfusionMatrixDisplay
 )
 
-# ──────────────────────────────────────────────
-# CONFIGURATION  ← edit paths before running
-# ──────────────────────────────────────────────
+# config
 
 VAL_SMOKE_DIR = "/data/CIS2/smoke_detection/smokeVal"
 VAL_CSV       = "/data/CIS2/smoke_detection/annotations_val.csv"
@@ -49,10 +47,10 @@ CHECKPOINTS = {
 }
 
 IMG_SIZE     = 224
-BATCH_SIZE   = 32          # larger batch for faster throughput measurement
+BATCH_SIZE   = 32         
 NUM_WORKERS  = 4
-WARMUP_RUNS  = 10          # GPU warmup iterations before timing
-LATENCY_RUNS = 50          # repeated single-image runs for stable latency estimate
+WARMUP_RUNS  = 10         
+LATENCY_RUNS = 50         
 DEVICE       = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 OUT_DIR      = Path("./inference_output")
 
@@ -70,9 +68,7 @@ COLORS = {
     "efficientnetv2m": "#C44E52",
 }
 
-# ──────────────────────────────────────────────
-# DATA HELPERS
-# ──────────────────────────────────────────────
+# data helpers
 
 def collect_smoke_images(folder: str) -> list:
     """Collect all images from a smoke folder recursively."""
@@ -134,9 +130,7 @@ def get_val_transform():
     ])
 
 
-# ──────────────────────────────────────────────
-# MODEL FACTORY  (mirrors training script)
-# ──────────────────────────────────────────────
+# model
 
 def build_model(backbone_name: str) -> nn.Module:
     if backbone_name == "resnet50":
@@ -179,9 +173,7 @@ def load_model(backbone_name: str, ckpt_path: str) -> nn.Module:
     return model
 
 
-# ──────────────────────────────────────────────
-# LATENCY BENCHMARK  (single-image, CPU + GPU)
-# ──────────────────────────────────────────────
+# latency benchmark
 
 def benchmark_latency(model: nn.Module) -> dict:
     """
@@ -224,9 +216,7 @@ def benchmark_latency(model: nn.Module) -> dict:
     }
 
 
-# ──────────────────────────────────────────────
-# FULL DATASET INFERENCE
-# ──────────────────────────────────────────────
+# full dataset inference
 
 def run_inference(model: nn.Module, loader: DataLoader):
     """
@@ -239,8 +229,8 @@ def run_inference(model: nn.Module, loader: DataLoader):
         for imgs, labels, _ in loader:
             imgs = imgs.to(DEVICE)
             logits = model(imgs)
-            probs  = F.softmax(logits, dim=1)          # [B, 2]
-            smoke_conf = probs[:, 1].cpu().numpy()     # confidence of 'bad'
+            probs  = F.softmax(logits, dim=1)         
+            smoke_conf = probs[:, 1].cpu().numpy()   
             preds = logits.argmax(dim=1).cpu().numpy()
 
             all_labels.extend(labels.numpy())
@@ -254,9 +244,7 @@ def run_inference(model: nn.Module, loader: DataLoader):
     )
 
 
-# ──────────────────────────────────────────────
-# SINGLE IMAGE INFERENCE
-# ──────────────────────────────────────────────
+# single image inference
 
 def infer_single(model: nn.Module, image_path: str) -> dict:
     transform = get_val_transform()
@@ -292,9 +280,7 @@ def infer_single(model: nn.Module, image_path: str) -> dict:
     }
 
 
-# ──────────────────────────────────────────────
-# PLOTTING
-# ──────────────────────────────────────────────
+# plotting
 
 def save_individual_report(backbone_name, metrics, labels, preds, confs, latency):
     bdir = OUT_DIR / backbone_name
@@ -334,7 +320,7 @@ def save_individual_report(backbone_name, metrics, labels, preds, confs, latency
     plt.tight_layout()
     plt.savefig(bdir / "inference_report.png", dpi=150)
     plt.close()
-    print(f"  📊  Report saved → {bdir}/inference_report.png")
+    print(f"   Report saved → {bdir}/inference_report.png")
 
 
 def save_comparison_report(all_results):
@@ -350,7 +336,7 @@ def save_comparison_report(all_results):
     names     = [DISPLAY_NAMES.get(b, b) for b in backbones]
     colors    = [COLORS.get(b, "#333") for b in backbones]
 
-    # ── Latency bar chart ──
+    # latency bar chart 
     ax_lat = fig.add_subplot(gs[0, 0])
     means  = [all_results[b]["latency"]["mean_ms"] for b in backbones]
     stds   = [all_results[b]["latency"]["std_ms"]  for b in backbones]
@@ -362,7 +348,7 @@ def save_comparison_report(all_results):
                     f"{val:.1f}", ha="center", va="bottom", fontsize=9)
     ax_lat.tick_params(axis="x", labelrotation=15)
 
-    # ── FPS bar chart ──
+    # FPS bar chart 
     ax_fps = fig.add_subplot(gs[0, 1])
     fps_vals = [all_results[b]["latency"]["fps"] for b in backbones]
     bars2    = ax_fps.bar(names, fps_vals, color=colors, alpha=0.85)
@@ -373,7 +359,7 @@ def save_comparison_report(all_results):
                     f"{val:.1f}", ha="center", va="bottom", fontsize=9)
     ax_fps.tick_params(axis="x", labelrotation=15)
 
-    # ── ROC overlay ──
+    #  ROC overlay 
     ax_roc = fig.add_subplot(gs[0, 2])
     for b, color in zip(backbones, colors):
         r      = all_results[b]
@@ -386,7 +372,7 @@ def save_comparison_report(all_results):
     ax_roc.set_xlabel("FPR"); ax_roc.set_ylabel("TPR")
     ax_roc.legend(fontsize=8)
 
-    # ── Confidence distributions (stacked) ──
+    #  Confidence distributions (stacked) 
     ax_conf = fig.add_subplot(gs[0, 3])
     for b, color in zip(backbones, colors):
         r = all_results[b]
@@ -397,7 +383,7 @@ def save_comparison_report(all_results):
     ax_conf.set_xlabel("P(smoke)"); ax_conf.set_ylabel("Count")
     ax_conf.legend(fontsize=8)
 
-    # ── Summary metrics table ──
+    #  Summary metrics table 
     ax_tbl = fig.add_subplot(gs[1, :])
     ax_tbl.axis("off")
 
@@ -453,12 +439,10 @@ def save_comparison_report(all_results):
     out_path = OUT_DIR / "inference_comparison.png"
     plt.savefig(out_path, dpi=150, bbox_inches="tight")
     plt.close()
-    print(f"\n🏆  Comparison report saved → {out_path}")
+    print(f"\n  Comparison report saved → {out_path}")
 
 
-# ──────────────────────────────────────────────
-# CONSOLE SUMMARY
-# ──────────────────────────────────────────────
+# summary
 
 def print_single_result(backbone_name, result):
     name = DISPLAY_NAMES.get(backbone_name, backbone_name)
@@ -490,9 +474,7 @@ def print_benchmark_summary(all_results):
     print(f"{'═'*90}\n")
 
 
-# ──────────────────────────────────────────────
-# MAIN
-# ──────────────────────────────────────────────
+# main
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Smoke detector inference & benchmark")
@@ -543,10 +525,10 @@ def run_backbone(backbone_name, ckpt_path, val_loader):
 def main():
     args = parse_args()
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    print(f"\n🖥️  Device : {DEVICE}")
-    print(f"📁  Output : {OUT_DIR}\n")
+    print(f"\n  Device : {DEVICE}")
+    print(f"  Output : {OUT_DIR}\n")
 
-    # ── Single image mode ───────────────────────
+    # single image mode
     if args.image:
         assert args.backbone and args.checkpoint, \
             "--image requires --backbone and --checkpoint"
@@ -556,7 +538,7 @@ def main():
         return
 
     # ── Build val DataLoader (shared across backbones) ──
-    print("📂 Collecting validation image paths …")
+    print("Collecting validation image paths …")
     val_smoke          = collect_smoke_images(VAL_SMOKE_DIR)
     _, val_clean       = load_csv(VAL_CSV)   # VAL_CSV contains clean frames only
     assert val_smoke,  "No val smoke images — check VAL_SMOKE_DIR."
@@ -568,18 +550,18 @@ def main():
     val_loader = DL(val_ds, batch_size=BATCH_SIZE, shuffle=False,
                     num_workers=NUM_WORKERS, pin_memory=True)
 
-    # ── Determine which backbones to run ────────
+    # determine which backbones to run
     if args.all:
         targets = CHECKPOINTS
     else:
         assert args.checkpoint, "--backbone requires --checkpoint"
         targets = {args.backbone: args.checkpoint}
 
-    # ── Run each backbone ────────────────────────
+    # run each backbone
     all_results = {}
     for backbone_name, ckpt_path in targets.items():
         if not os.path.exists(ckpt_path):
-            print(f"  ⚠️  Checkpoint not found, skipping: {ckpt_path}")
+            print(f"   Checkpoint not found, skipping: {ckpt_path}")
             continue
         result = run_backbone(backbone_name, ckpt_path, val_loader)
         all_results[backbone_name] = result
@@ -600,7 +582,7 @@ def main():
         save_comparison_report(all_results)
 
     print_benchmark_summary(all_results)
-    print("✅  Inference complete.\n")
+    print("  Inference complete.\n")
 
 
 if __name__ == "__main__":
