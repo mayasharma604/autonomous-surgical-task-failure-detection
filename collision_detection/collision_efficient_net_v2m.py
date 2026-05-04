@@ -10,9 +10,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import precision_score, recall_score, accuracy_score
 import numpy as np
 
-# -----------------------
-# 1. Trial-Aware Dataset (Ensures unseen trials for Val)
-# -----------------------
+# 1. trial-aware dataset (ensures unseen trials for val)
 class TrialAwareCollisionDataset(Dataset):
     def __init__(self, root_dir, trial_list, transform=None):
         self.transform = transform
@@ -23,7 +21,7 @@ class TrialAwareCollisionDataset(Dataset):
             for label_name in ['good', 'bad']:
                 label_path = os.path.join(trial_path, label_name)
                 if os.path.exists(label_path):
-                    # Mapping Good=0, Bad=1
+                    # mapping good=0, bad=1
                     label_idx = 0 if label_name == 'good' else 1 
                     for fname in os.listdir(label_path):
                         if fname.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.tif', '.tiff')):
@@ -39,11 +37,9 @@ class TrialAwareCollisionDataset(Dataset):
             image = self.transform(image)
         return image, label
 
-# -----------------------
-# 2. Data Setup & Split
-# -----------------------
+# 2. data setup & split
 data_dir = "/data/CIS2/JHU-collision-CAO1_annotated"
-input_size = 384 # Optimized for V2-M
+input_size = 384 # optimized for v2-m
 
 train_transform = transforms.Compose([
     transforms.Resize((input_size, input_size)),
@@ -60,29 +56,27 @@ val_transform = transforms.Compose([
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
-# Perform Trial-Level Split
+# split trials so we dont have same folders in train and val
 all_trials = [d for d in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, d))]
 train_trials, val_trials = train_test_split(all_trials, test_size=0.2, random_state=42)
 
 train_subset = TrialAwareCollisionDataset(data_dir, train_trials, transform=train_transform)
 val_subset = TrialAwareCollisionDataset(data_dir, val_trials, transform=val_transform)
 
-# V2-M is memory intensive; batch size 16 or 8 is usually safest
+# using smaller batch size since v2-m uses a lot of memory
 trainloader = DataLoader(train_subset, batch_size=16, shuffle=True, num_workers=8)
 valloader = DataLoader(val_subset, batch_size=16, shuffle=False, num_workers=8)
 
-print(f"✅ Trial Split Complete for EfficientNet-V2-M.")
+print(f"Trial Split Complete for EfficientNet-V2-M.")
 print(f"Training: {len(train_trials)} trials ({len(train_subset)} images)")
 print(f"Val:      {len(val_trials)} trials ({len(val_subset)} images)")
 
-# -----------------------
-# 3. EfficientNet-V2-M Model Setup
-# -----------------------
+# 3. efficientnet-v2-m model setup
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 weights = EfficientNet_V2_M_Weights.DEFAULT
 model = efficientnet_v2_m(weights=weights)
 
-# Modify classifier for binary classification
+# change classifier for 2 classes
 num_ftrs = model.classifier[1].in_features
 model.classifier[1] = nn.Linear(num_ftrs, 2)
 model = model.to(device)
@@ -91,9 +85,7 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-4)
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=3, factor=0.5)
 
-# -----------------------
-# 4. Training Loop
-# -----------------------
+# 4. training loop
 epochs = 50
 best_val_loss = float('inf')
 early_stop_patience = 10
@@ -101,7 +93,7 @@ patience_counter = 0
 model_save_path = "best_effnet_v2m_collision.pth"
 
 for epoch in range(epochs):
-    # --- TRAINING ---
+    # training phase
     model.train()
     train_loss, train_correct, train_total = 0.0, 0, 0
     for images, labels in trainloader:
@@ -120,7 +112,7 @@ for epoch in range(epochs):
     avg_train_loss = train_loss / len(trainloader)
     avg_train_acc = train_correct / train_total
 
-    # --- VALIDATION ---
+    # validation phase
     model.eval()
     val_loss, val_correct, val_total = 0.0, 0, 0
     all_labels, all_preds = [], []
@@ -139,18 +131,18 @@ for epoch in range(epochs):
     avg_val_loss = val_loss / len(valloader)
     avg_val_acc = val_correct / val_total
     
-    # Calculate Precision and Recall
+    # metrics for the validation set
     prec = precision_score(all_labels, all_preds, zero_division=0)
     rec = recall_score(all_labels, all_preds, zero_division=0)
     scheduler.step(avg_val_loss)
 
-    # --- OUTPUT REQUESTED METRICS ---
+    # output metrics
     print(f"\nEpoch {epoch+1}/{epochs}")
     print(f"  TRAIN | Loss: {avg_train_loss:.4f} | Acc: {avg_train_acc:.2%}")
     print(f"  VAL   | Loss: {avg_val_loss:.4f} | Acc: {avg_val_acc:.2%}")
     print(f"  METRICS (Val) | Precision: {prec:.4f} | Recall: {rec:.4f}")
 
-    # --- SAVING & EARLY STOPPING ---
+    # saving & early stopping
     if avg_val_loss < best_val_loss:
         best_val_loss = avg_val_loss
         patience_counter = 0
