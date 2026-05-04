@@ -12,9 +12,7 @@ from sklearn.metrics import precision_score, recall_score
 import os
 import numpy as np
 
-# =========================
-# CONFIGURATION
-# =========================
+# configuration
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CSV_PATH = os.path.join(BASE_DIR, "../annotations/incomplete_cut_labels2.csv")
 BATCH_SIZE = 32
@@ -25,9 +23,7 @@ PHASE2_EPOCHS = 25
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 MODEL_SAVE_PATH = "best_b0_incomplete_cut_regression.pth"
 
-# =========================
-# 1. DATASET CLASS
-# =========================
+# 1. dataset class
 class SurgicalProgressDataset(Dataset):
     def __init__(self, csv_file, transform=None):
         self.df = pd.read_csv(csv_file)
@@ -49,9 +45,7 @@ class SurgicalProgressDataset(Dataset):
             image = self.transform(image)
         return image, torch.tensor(label, dtype=torch.float32)
 
-# =========================
-# 2. AUGMENTATIONS & LOADING
-# =========================
+# 2. augmentations & loading
 data_transforms = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.RandomHorizontalFlip(),
@@ -68,9 +62,7 @@ train_set, val_set = torch.utils.data.random_split(dataset, [train_size, val_siz
 train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=4)
 val_loader = DataLoader(val_set, batch_size=BATCH_SIZE, shuffle=False, num_workers=4)
 
-# =========================
-# 3. MODEL SETUP
-# =========================
+# 3. model setup
 model = models.efficientnet_b0(weights=models.EfficientNet_B0_Weights.DEFAULT)
 num_ftrs = model.classifier[1].in_features
 model.classifier[1] = nn.Sequential(
@@ -80,9 +72,7 @@ model.classifier[1] = nn.Sequential(
 model = model.to(DEVICE)
 criterion = nn.MSELoss()
 
-# =========================
-# 4. SHARED TRAINING FUNCTION
-# =========================
+# 4. shared training function
 def run_epoch(epoch, optimizer, loader, is_train=True):
     if is_train:
         model.train()
@@ -113,10 +103,10 @@ def run_epoch(epoch, optimizer, loader, is_train=True):
     all_preds = np.array(all_preds)
     all_labels = np.array(all_labels)
 
-    # Accuracy: Pred is within 10% of True Progress
+    # accuracy: pred is within 10% of true progress
     acc = (np.abs(all_preds - all_labels) < 0.1).mean() * 100
     
-    # Binary Metrics (Threshold at 0.80 to define "Incomplete/Complete Cut")
+    # binary metrics (threshold at 0.80 to define "incomplete/complete cut")
     threshold = 0.80
     bin_preds = (all_preds > threshold).astype(int)
     bin_labels = (all_labels > threshold).astype(int)
@@ -126,13 +116,11 @@ def run_epoch(epoch, optimizer, loader, is_train=True):
     
     return avg_loss, acc, prec, rec
 
-# =========================
-# 5. EXECUTION
-# =========================
+# 5. execution
 best_val_loss = float('inf')
 
-# --- PHASE 1 ---
-print("\n🧊 PHASE 1: Backbone Frozen (5 Epochs)")
+# phase 1
+print("\nPHASE 1: Backbone Frozen (5 Epochs)")
 for param in model.features.parameters():
     param.requires_grad = False
 optimizer = optim.Adam(model.classifier.parameters(), lr=PHASE1_LR)
@@ -149,8 +137,8 @@ for epoch in range(PHASE1_EPOCHS):
         best_val_loss = v_loss
         torch.save(model.state_dict(), MODEL_SAVE_PATH)
 
-# --- PHASE 2 ---
-print("\n🔥 PHASE 2: Full Fine-Tuning (25 Epochs)")
+# phase 2
+print("\nPHASE 2: Full Fine-Tuning (25 Epochs)")
 for param in model.parameters():
     param.requires_grad = True
 optimizer = optim.Adam(model.parameters(), lr=PHASE2_LR)
@@ -167,4 +155,4 @@ for epoch in range(PHASE2_EPOCHS):
     if v_loss < best_val_loss:
         best_val_loss = v_loss
         torch.save(model.state_dict(), MODEL_SAVE_PATH)
-        print("  ⭐ Best Model Saved (Val Loss Improved)")
+        print("Best Model Saved (Val Loss Improved)")
