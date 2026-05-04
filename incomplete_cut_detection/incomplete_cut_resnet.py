@@ -77,7 +77,7 @@ val_indices = full_dataset.df[full_dataset.df['unique_key'].isin(val_trial_ids)]
 train_set = Subset(full_dataset, train_indices)
 val_set = Subset(full_dataset, val_indices)
 
-print(f"✅ Trial-Based Split Summary:")
+print(f" Trial-Based Split Summary:")
 print(f"   Train: {len(train_trial_ids)} trials | {len(train_indices)} frames")
 print(f"   Val:   {len(val_trial_ids)} trials | {len(val_indices)} frames")
 
@@ -151,4 +151,4 @@ for epoch in range(EPOCHS):
     if avg_val_loss < best_val_loss:
         best_val_loss = avg_val_loss
         torch.save(model.state_dict(), MODEL_SAVE_PATH)
-        print(f"  ⭐ Best Model Saved (Strict Trial Split)")
+        print(f"  Best Model Saved (Strict Trial Split)")
