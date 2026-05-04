@@ -28,9 +28,7 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, models
 
-# ──────────────────────────────────────────────
-# CONFIGURATION  ← same as your other scripts
-# ──────────────────────────────────────────────
+# config
 
 VAL_SMOKE_DIR = "/data/CIS2/smoke_detection/smokeVal"
 VAL_CSV       = "/data/CIS2/smoke_detection/annotations_val.csv"  # clean frames only
@@ -57,9 +55,7 @@ DISPLAY_NAMES = {
     "efficientnetv2m": "EfficientNetV2-M",
 }
 
-# ──────────────────────────────────────────────
-# DATA HELPERS
-# ──────────────────────────────────────────────
+# data helpers
 
 def collect_smoke_images(folder: str) -> list:
     """Collect all images from a smoke folder recursively."""
@@ -120,9 +116,7 @@ def get_val_transform():
     ])
 
 
-# ──────────────────────────────────────────────
-# MODEL FACTORY
-# ──────────────────────────────────────────────
+# model training
 
 def build_model(backbone_name):
     if backbone_name == "resnet50":
@@ -154,9 +148,7 @@ def build_model(backbone_name):
     return model
 
 
-# ──────────────────────────────────────────────
-# INFERENCE — returns per-image records
-# ──────────────────────────────────────────────
+# inference for per image labels
 
 def run_inference(model, loader):
     """
@@ -184,9 +176,7 @@ def run_inference(model, loader):
     return records
 
 
-# ──────────────────────────────────────────────
-# GRID BUILDER
-# ──────────────────────────────────────────────
+# grid for misclassifications
 
 def load_thumb(path):
     """Load image and resize to thumbnail. Returns PIL Image."""
@@ -217,7 +207,7 @@ def build_grid(records, error_type, backbone_name, out_dir):
     total = len(subset)
 
     if total == 0:
-        print(f"    ✅  No {error_type.upper()}s for {name}")
+        print(f"  No {error_type.upper()}s for {name}")
         return
 
     # Sort by confidence distance from decision boundary (most wrong first)
@@ -277,12 +267,10 @@ def build_grid(records, error_type, backbone_name, out_dir):
     fname = out_dir / f"misclassified_{error_type}.png"
     plt.savefig(fname, dpi=dpi, bbox_inches="tight")
     plt.close()
-    print(f"    💾  Saved {n}/{total} {error_type.upper()}s → {fname}")
+    print(f"  Saved {n}/{total} {error_type.upper()}s → {fname}")
 
 
-# ──────────────────────────────────────────────
-# TEXT LOG  (full list with paths)
-# ──────────────────────────────────────────────
+# text logging
 
 def save_misclassification_log(records, backbone_name, out_dir):
     fps = [r for r in records if r["pred_label"] == 1 and r["true_label"] == 0]
@@ -306,12 +294,10 @@ def save_misclassification_log(records, backbone_name, out_dir):
         for r in fns_sorted:
             f.write(f"  P(smoke)={r['conf_smoke']*100:5.1f}%  {r['path']}\n")
 
-    print(f"    📄  Full path log → {log_path}")
+    print(f" Full path log → {log_path}")
 
 
-# ──────────────────────────────────────────────
-# SUMMARY PANEL  (one figure per backbone)
-# ──────────────────────────────────────────────
+# summary panel
 
 def save_summary_panel(records, backbone_name, out_dir):
     """
@@ -328,7 +314,7 @@ def save_summary_panel(records, backbone_name, out_dir):
                  f"({total_errors} errors / {len(records)} images)",
                  fontsize=13, fontweight="bold")
 
-    # ── Error type bar ──
+    # error type bar
     axes[0].bar(["False Positives\n(clean→smoke)", "False Negatives\n(smoke→clean)"],
                 [len(fps), len(fns)],
                 color=["#e74c3c", "#e67e22"], alpha=0.85, edgecolor="white")
@@ -337,7 +323,7 @@ def save_summary_panel(records, backbone_name, out_dir):
     for i, v in enumerate([len(fps), len(fns)]):
         axes[0].text(i, v + 0.3, str(v), ha="center", fontweight="bold")
 
-    # ── Confidence histogram of errors ──
+    # confidence histogram of errors
     fp_confs = [r["conf_smoke"] for r in fps]
     fn_confs = [r["conf_smoke"] for r in fns]
     if fp_confs:
@@ -351,7 +337,7 @@ def save_summary_panel(records, backbone_name, out_dir):
     axes[1].set_xlabel("P(smoke)"); axes[1].set_ylabel("Count")
     axes[1].legend()
 
-    # ── Errors per tissue ──
+    # errors per tissue
     tissue_errors = {}
     for r in fps + fns:
         try:
@@ -375,12 +361,10 @@ def save_summary_panel(records, backbone_name, out_dir):
     plt.tight_layout()
     plt.savefig(out_dir / "misclassification_summary.png", dpi=150, bbox_inches="tight")
     plt.close()
-    print(f"    📊  Summary panel → {out_dir / 'misclassification_summary.png'}")
+    print(f"      Summary panel → {out_dir / 'misclassification_summary.png'}")
 
 
-# ──────────────────────────────────────────────
-# MAIN
-# ──────────────────────────────────────────────
+# main
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Smoke detector misclassification viewer")
@@ -422,14 +406,14 @@ def process_backbone(backbone_name, val_loader):
 def main():
     args = parse_args()
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    print(f"\n🖥️  Device : {DEVICE}")
+    print(f"\n  Device : {DEVICE}")
 
     # Override checkpoint if provided
     if args.backbone and args.checkpoint:
         CHECKPOINTS[args.backbone] = args.checkpoint
 
     # Build val loader
-    print("\n📂 Collecting validation image paths …")
+    print("\n Collecting validation image paths …")
     val_smoke          = collect_smoke_images(VAL_SMOKE_DIR)
     _, val_clean       = load_csv(VAL_CSV)   # VAL_CSV contains clean frames only
     assert val_smoke,  "No val smoke images — check VAL_SMOKE_DIR."
@@ -445,11 +429,11 @@ def main():
     for backbone_name in targets:
         ckpt = CHECKPOINTS[backbone_name]
         if not os.path.exists(ckpt):
-            print(f"\n  ⚠️  Checkpoint not found, skipping: {ckpt}")
+            print(f"\n    Checkpoint not found, skipping: {ckpt}")
             continue
         process_backbone(backbone_name, val_loader)
 
-    print("\n✅  Done.\n")
+    print("\n  Done.\n")
 
 
 if __name__ == "__main__":
