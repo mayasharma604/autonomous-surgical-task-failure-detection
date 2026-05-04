@@ -13,9 +13,7 @@ class SqueezeTime(nn.Module):
     def forward(self, x):
         return x.squeeze(1) 
 
-# =========================
-# Config
-# =========================
+# config
 WORKSPACE_ROOT = '/data/tensionData'
 WINDOW_SIZE = 1 
 PREDICT_FRAMES = 1
@@ -26,9 +24,7 @@ IMG_SIZE = 224
 EPOCHS = 10
 DEVICE = tt.setup_device(seed=42)
 
-# =========================
-# Prepare masks & clips
-# =========================
+# masks and clips
 mask_lookup = tt.make_mask_lookup(WORKSPACE_ROOT)
 seg_mask_lookup = tt.make_seg_mask_lookup(WORKSPACE_ROOT)
 
@@ -41,9 +37,7 @@ val_windows = tt.build_windows(val_clips, WINDOW_SIZE, PREDICT_FRAMES)
 train_windows = tt.balance_windows(train_windows, PREDICT_FRAMES)
 val_windows = tt.balance_windows(val_windows, PREDICT_FRAMES)
 
-# =========================
-# Loaders
-# =========================
+# loaders
 train_loader, val_loader, train_ds, val_ds = tt.make_loaders(
     train_windows, val_windows,
     BATCH_SIZE, NUM_WORKERS,
@@ -53,12 +47,10 @@ train_loader, val_loader, train_ds, val_ds = tt.make_loaders(
     dual_stream=True
 )
 
-# =========================
-# Model: ViT-B/16
-# =========================
+# model vit
 base_model = vit_b_16(weights=None) 
 
-# Modify patch embedding for 6 channels (RGB + Mask)
+# Modify patch embedding for 6 channels
 original_proj = base_model.conv_proj
 base_model.conv_proj = nn.Conv2d(
     in_channels=6,
@@ -68,7 +60,7 @@ base_model.conv_proj = nn.Conv2d(
     padding=original_proj.padding
 )
 
-# Modify head for single-output binary classification
+# modify head for single-output binary classification
 base_model.heads.head = nn.Linear(base_model.heads.head.in_features, 1)
 
 model = nn.Sequential(
@@ -76,16 +68,12 @@ model = nn.Sequential(
     base_model
 ).to(DEVICE)
 
-# =========================
-# Optimizer & Scheduler
-# =========================
+# scheduler and opti
 optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=2, factor=0.5)
 
-# =========================
-# Training loop
-# =========================
-# early_stop_patience=5 ensures it stops before overfitting
+# train
+# early_stop_patience=5 to make sure it stops before overfitting
 tt.train(
     model=model,
     raw_model=base_model,
@@ -100,9 +88,7 @@ tt.train(
     early_stop_patience=5 
 )
 
-# =========================
-# FINAL METRICS EVALUATION
-# =========================
+# final metrics
 print("\n" + "="*40)
 print("LOADING BEST MODEL FOR METRICS REPORT")
 print("="*40)
@@ -112,7 +98,7 @@ if os.path.exists(best_path):
     checkpoint = torch.load(best_path, map_location=DEVICE, weights_only=False)
     state_dict = checkpoint['model_state_dict'] if 'model_state_dict' in checkpoint else checkpoint
     
-    # Prefix handling for Sequential wrapper
+    # prefix handling for sequential wrapper
     new_state_dict = {}
     for k, v in state_dict.items():
         if not k.startswith('1.'):
