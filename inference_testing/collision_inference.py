@@ -17,7 +17,7 @@ OUTPUT_DIR = "./effnet_v2m_collision_inference_bad"
 GOOD_DIR = os.path.join(OUTPUT_DIR, "good")
 BAD_DIR = os.path.join(OUTPUT_DIR, "bad")
 
-# Standard size for EffNet V2-M is often 480, but using 224 to match your previous config
+# size to 224 for image
 IMG_SIZE = 224 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
