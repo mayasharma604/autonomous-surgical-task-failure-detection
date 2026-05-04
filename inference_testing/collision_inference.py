@@ -50,7 +50,7 @@ else:
 
 model.eval()
 
-print(f"✅ Loaded EfficientNet-V2-M from {MODEL_PATH}")
+print(f" Loaded EfficientNet-V2-M from {MODEL_PATH}")
 
 # =========================
 # Transforms
@@ -72,7 +72,7 @@ image_files = sorted([
     if f.lower().endswith((".png", ".jpg", ".jpeg"))
 ])
 
-print(f"📦 Found {len(image_files)} images")
+print(f" Found {len(image_files)} images")
 
 # =========================
 # Inference
@@ -84,7 +84,7 @@ with torch.no_grad():
         try:
             img = Image.open(path).convert("RGB")
         except:
-            print(f"⚠️ Skipping unreadable: {fname}")
+            print(f" Skipping unreadable: {fname}")
             continue
 
         img_tensor = transform(img).unsqueeze(0).to(DEVICE)
@@ -101,6 +101,6 @@ with torch.no_grad():
 
         shutil.copy(path, dest)
 
-print("\n✅ Done!")
+print("\n Done!")
 print(f"Good frames moved to → {GOOD_DIR}")
 print(f"Bad frames moved to → {BAD_DIR}")
