@@ -12,9 +12,7 @@ from PIL import Image
 import os
 import numpy as np
 
-# =========================
-# CONFIGURATION
-# =========================
+# config
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CSV_PATH = os.path.join(BASE_DIR, "../annotations/incomplete_cut_labels2.csv")
 BATCH_SIZE = 32
@@ -23,16 +21,14 @@ EPOCHS = 50
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 MODEL_SAVE_PATH = "best_resnet50_trial_split.pth"
 
-# =========================
-# 1. DATASET CLASS
-# =========================
+# dataset class
 class SurgicalProgressDataset(Dataset):
     def __init__(self, csv_file, transform=None):
         if not os.path.exists(csv_file):
             raise FileNotFoundError(f"CSV not found at {csv_file}")
         self.df = pd.read_csv(csv_file)
         self.transform = transform
-        print(f"📊 Dataset Loaded: {len(self.df)} total frames.")
+        print(f" Dataset Loaded: {len(self.df)} total frames.")
 
     def __len__(self):
         return len(self.df)
@@ -47,9 +43,7 @@ class SurgicalProgressDataset(Dataset):
             image = self.transform(image)
         return image, torch.tensor(label, dtype=torch.float32)
 
-# =========================
-# 2. TRIAL-BASED SPLIT LOGIC
-# =========================
+# trial split logic
 data_transforms = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.RandomHorizontalFlip(),
@@ -60,7 +54,7 @@ data_transforms = transforms.Compose([
 
 full_dataset = SurgicalProgressDataset(CSV_PATH, transform=data_transforms)
 
-# Get unique trial IDs (unique_key handles same trial IDs across different phases)
+# Get unique trial IDs 
 unique_trials = full_dataset.df['unique_key'].unique()
 np.random.seed(42) # For consistent research results
 np.random.shuffle(unique_trials)
@@ -84,9 +78,7 @@ print(f"   Val:   {len(val_trial_ids)} trials | {len(val_indices)} frames")
 train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=4)
 val_loader = DataLoader(val_set, batch_size=BATCH_SIZE, shuffle=False, num_workers=4)
 
-# =========================
-# 3. MODEL SETUP
-# =========================
+# model setup
 model = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
 model.fc = nn.Sequential(
     nn.Linear(model.fc.in_features, 1),
@@ -97,9 +89,7 @@ model = model.to(DEVICE)
 criterion = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
-# =========================
-# 4. TRAINING LOOP
-# =========================
+# training loop
 best_val_loss = float('inf')
 
 for epoch in range(EPOCHS):
