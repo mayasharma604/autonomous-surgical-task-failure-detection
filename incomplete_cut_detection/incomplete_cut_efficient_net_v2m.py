@@ -19,7 +19,7 @@ BATCH_SIZE = 16
 PHASE1_LR = 1e-3
 PHASE2_LR = 1e-5
 PHASE1_EPOCHS = 5
-PHASE2_EPOCHS = 45 # Total 50
+PHASE2_EPOCHS = 45
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 MODEL_SAVE_PATH = "best_v2m_incomplete_cut_regression.pth"
 
