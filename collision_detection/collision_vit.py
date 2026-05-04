@@ -9,9 +9,7 @@ import os
 import numpy as np
 from sklearn.metrics import precision_score, recall_score
 
-# -----------------------
-# 1. Dataset Class Definition
-# -----------------------
+# class for loading images from nested folders
 class NestedImageDataset(Dataset):
     def __init__(self, root_dir, transform=None):
         self.transform = transform
@@ -19,10 +17,11 @@ class NestedImageDataset(Dataset):
         self.classes = ['good', 'bad']
         self.class_to_idx = {cls_name: i for i, cls_name in enumerate(self.classes)}
 
-        # Assuming structure: root_dir/Trial_Name/good/image.jpg
+        # check if data folder actually exists
         if not os.path.exists(root_dir):
             raise RuntimeError(f"Directory not found: {root_dir}")
 
+        # folder structure: root/trial/good_or_bad/image.jpg
         for trial_folder in os.listdir(root_dir):
             trial_path = os.path.join(root_dir, trial_folder)
             if not os.path.isdir(trial_path):
@@ -50,9 +49,7 @@ class NestedImageDataset(Dataset):
             image = self.transform(image)
         return image, label
 
-# -----------------------
-# 2. Configuration & Transforms
-# -----------------------
+# basics like paths and image size
 data_dir = "/data/CIS2/JHU-collision-CAO1_annotated"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 input_size = 224
@@ -74,10 +71,7 @@ val_transform = transforms.Compose([
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
-# -----------------------
-# 3. Data Split (Trial-Based)
-# -----------------------
-# Indexing trials first
+# separate trials so train and val don't share any folders
 full_ds_indexer = NestedImageDataset(root_dir=data_dir)
 unique_trials = np.unique([d[2] for d in full_ds_indexer.data])
 np.random.seed(42)
@@ -90,7 +84,7 @@ val_trial_names = unique_trials[split_idx:]
 train_samples = [d for d in full_ds_indexer.data if d[2] in train_trial_names]
 val_samples = [d for d in full_ds_indexer.data if d[2] in val_trial_names]
 
-# Create specific Dataset instances for Train and Val
+# set up the actual train and val datasets
 train_dataset = NestedImageDataset(root_dir=data_dir)
 train_dataset.data = train_samples
 train_dataset.transform = train_transform
@@ -102,12 +96,10 @@ val_dataset.transform = val_transform
 trainloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
 testloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
 
-print(f"✅ Trial Split: {len(train_trial_names)} Train Trials | {len(val_trial_names)} Val Trials")
-print(f"📊 Samples: {len(train_samples)} Train Images | {len(val_samples)} Val Images")
+print(f"trial split done: {len(train_trial_names)} train trials | {len(val_trial_names)} val trials")
+print(f"total images: {len(train_samples)} train | {len(val_samples)} val")
 
-# -----------------------
-# 4. Model Setup (ViT)
-# -----------------------
+# load vision transformer
 weights = ViT_B_16_Weights.DEFAULT
 model = vit_b_16(weights=weights)
 model.heads.head = nn.Linear(model.heads.head.in_features, 2)
@@ -117,13 +109,11 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=5e-5)
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=2, factor=0.5)
 
-# -----------------------
-# 5. Training Loop
-# -----------------------
+# main training loop
 best_val_loss = float('inf')
 
 for epoch in range(epochs):
-    # Training Phase
+    # training
     model.train()
     running_loss, train_correct, train_total = 0.0, 0, 0
     for images, labels in trainloader:
@@ -142,7 +132,7 @@ for epoch in range(epochs):
     avg_train_loss = running_loss / len(trainloader)
     train_acc = (train_correct / train_total) * 100
 
-    # Validation Phase
+    # validation
     model.eval()
     val_loss, all_labels, all_preds = 0.0, [], []
     with torch.no_grad():
@@ -161,14 +151,15 @@ for epoch in range(epochs):
     val_prec = precision_score(all_labels, all_preds, zero_division=0)
     val_rec = recall_score(all_labels, all_preds, zero_division=0)
 
-    print(f"\nEpoch {epoch+1}/{epochs}")
-    print(f"  Train Loss: {avg_train_loss:.4f} | Train Acc: {train_acc:.2f}%")
-    print(f"  Val Loss:   {avg_val_loss:.4f} | Val Acc:   {val_acc:.2f}%")
-    print(f"  Precision:  {val_prec:.4f}     | Recall:    {val_rec:.4f}")
+    print(f"\nepoch {epoch+1}/{epochs}")
+    print(f"  train loss: {avg_train_loss:.4f} | acc: {train_acc:.2f}%")
+    print(f"  val loss:   {avg_val_loss:.4f} | acc:   {val_acc:.2f}%")
+    print(f"  precision:  {val_prec:.4f}     | recall:    {val_rec:.4f}")
 
+    # save best one
     if avg_val_loss < best_val_loss:
         best_val_loss = avg_val_loss
         torch.save(model.state_dict(), model_save_path)
-        print(f"  ⭐ [SAVED] New best performance at Epoch {epoch+1}")
+        print(f"  found better model, saved it")
     
     scheduler.step(avg_val_loss)
