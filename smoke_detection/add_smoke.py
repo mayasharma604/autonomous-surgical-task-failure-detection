@@ -27,7 +27,7 @@ except ImportError:
     sys.exit(1)
 
 
-# ── Augmentation pipeline ─────────────────────────────────────────────────────
+# augmentation pipeline
 
 # Check albumentations version to handle API differences
 import albumentations as _a_check
@@ -53,7 +53,7 @@ else:
     ])
 
 
-# ── Mask detection ────────────────────────────────────────────────────────────
+# mask detection
 
 def build_content_mask(image: np.ndarray, black_threshold: int = 15,
                         erode_px: int = 20) -> np.ndarray:
@@ -81,7 +81,7 @@ def build_content_mask(image: np.ndarray, black_threshold: int = 15,
     return mask
 
 
-# ── Core functions ────────────────────────────────────────────────────────────
+# core functions
 
 def load_image(path: Path) -> np.ndarray:
     img = cv2.imread(str(path), cv2.IMREAD_COLOR)
@@ -98,7 +98,7 @@ def apply_smoke_masked(image: np.ndarray, mask: np.ndarray) -> np.ndarray:
     3. Feather-blend back using the eroded mask so the smoke fades out
        naturally before it gets anywhere near the actual edge.
     """
-    # 1. Tight bounding box of the eroded mask
+    # tight bounding box of the eroded mask
     ys, xs = np.where(mask > 0)
     if len(xs) == 0:
         return image
@@ -106,24 +106,24 @@ def apply_smoke_masked(image: np.ndarray, mask: np.ndarray) -> np.ndarray:
     x0, x1 = int(xs.min()), int(xs.max())
     y0, y1 = int(ys.min()), int(ys.max())
 
-    # 2. Augment only the cropped interior
+    # augment only the cropped interior
     crop     = image[y0:y1, x0:x1]
     crop_rgb = cv2.cvtColor(crop, cv2.COLOR_BGR2RGB)
     aug_rgb  = smoke_aug(image=crop_rgb)["image"]
     aug_crop = cv2.cvtColor(aug_rgb, cv2.COLOR_RGB2BGR)
 
-    # 3. Feather the eroded mask — smoke fades to zero well before the border
+    # feather the eroded mask, smoke fades to zero well before the border
     feathered  = cv2.GaussianBlur(mask, (51, 51), sigmaX=25, sigmaY=25)
     alpha_full = feathered.astype(np.float32) / 255.0
     alpha_crop = alpha_full[y0:y1, x0:x1]
     alpha_3ch  = cv2.merge([alpha_crop, alpha_crop, alpha_crop])
 
-    # 4. Blend
+    # blend
     blended = (aug_crop.astype(np.float32) * alpha_3ch
                + crop.astype(np.float32)   * (1.0 - alpha_3ch))
     blended = np.clip(blended, 0, 255).astype(np.uint8)
 
-    # 5. Paste back
+    # paste back
     result = image.copy()
     result[y0:y1, x0:x1] = blended
     return result
@@ -192,7 +192,7 @@ def process_folder(
     print(f"\nDone. {success} saved, {skipped} skipped, {errors} errors.")
 
 
-# ── CLI ───────────────────────────────────────────────────────────────────────
+# CLI
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
