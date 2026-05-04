@@ -23,11 +23,9 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, models
 
-# ──────────────────────────────────────────────
-# CONFIGURATION
-# ──────────────────────────────────────────────
+# config
 
-TISSUE_DIR = ""          # ← leave empty, pass via --tissue at runtime
+TISSUE_DIR = ""          
 
 CHECKPOINTS = {
     "resnet50":        "./ablation_output/resnet50_smoke_detector.pth",
@@ -59,9 +57,7 @@ DISPLAY_NAMES = {
     "efficientnetv2m": "EfficientNetV2-M",
 }
 
-# ──────────────────────────────────────────────
-# DATA
-# ──────────────────────────────────────────────
+# data
 
 def collect_images(tissue_dir: str) -> list:
     paths = []
@@ -95,9 +91,7 @@ def get_transform():
     ])
 
 
-# ──────────────────────────────────────────────
-# MODEL FACTORY
-# ──────────────────────────────────────────────
+# model
 
 def build_model(backbone_name: str) -> nn.Module:
     if backbone_name == "resnet50":
@@ -130,9 +124,7 @@ def build_model(backbone_name: str) -> nn.Module:
     return model
 
 
-# ──────────────────────────────────────────────
-# INFERENCE + SORTING
-# ──────────────────────────────────────────────
+# inference and sorting
 
 def run_and_sort(backbone_name: str, loader: DataLoader,
                  out_dir: Path, use_copy: bool):
@@ -159,7 +151,7 @@ def run_and_sort(backbone_name: str, loader: DataLoader,
             logits = model(imgs)
             probs  = F.softmax(logits, dim=1)
             preds  = logits.argmax(dim=1).cpu()
-            confs  = probs[:, 1].cpu()           # P(smoke)
+            confs  = probs[:, 1].cpu()          
 
             for path, pred, conf in zip(paths, preds, confs):
                 src      = Path(path)
@@ -194,23 +186,19 @@ def run_and_sort(backbone_name: str, loader: DataLoader,
     return n_clean, n_smoke
 
 
-# ──────────────────────────────────────────────
-# SUMMARY PRINTOUT
-# ──────────────────────────────────────────────
+# summary
 
 def print_result(backbone_name, n_clean, n_smoke, out_dir):
     total = n_clean + n_smoke
     name  = DISPLAY_NAMES.get(backbone_name, backbone_name)
     pct   = (n_smoke / total * 100) if total else 0
     print(f"  {name:<22}  "
-          f"🟢 clean: {n_clean:>5}  🔴 smoke: {n_smoke:>5}  "
+          f" clean: {n_clean:>5}   smoke: {n_smoke:>5}  "
           f"({pct:.1f}% flagged as smoke)")
     print(f"  {'':22}  → {out_dir}")
 
 
-# ──────────────────────────────────────────────
-# MAIN
-# ──────────────────────────────────────────────
+# main
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -234,21 +222,21 @@ def main():
 
     tissue_dir = args.tissue.strip()
     if not tissue_dir:
-        print("❌  No tissue path provided. Use --tissue /path/to/tissue_folder")
+        print("  No tissue path provided. Use --tissue /path/to/tissue_folder")
         return
     if not os.path.isdir(tissue_dir):
-        print(f"❌  Directory not found: {tissue_dir}")
+        print(f"  Directory not found: {tissue_dir}")
         return
 
-    print(f"\n🖥️  Device  : {DEVICE}")
-    print(f"📁  Tissue  : {tissue_dir}")
-    print(f"🔁  Mode    : {'copy' if args.copy else 'symlink'}")
-    print(f"📊  Threshold: P(smoke) > {args.conf:.2f}\n")
+    print(f"\n  Device  : {DEVICE}")
+    print(f"  Tissue  : {tissue_dir}")
+    print(f"  Mode    : {'copy' if args.copy else 'symlink'}")
+    print(f"  Threshold: P(smoke) > {args.conf:.2f}\n")
 
     # Collect images
     image_paths = collect_images(tissue_dir)
     if not image_paths:
-        print("❌  No images found. Check the tissue path or IMAGE_PATTERNS in the script.")
+        print("  No images found. Check the tissue path or IMAGE_PATTERNS in the script.")
         return
     print(f"  Found {len(image_paths)} images\n")
 
@@ -265,7 +253,7 @@ def main():
     for backbone_name in targets:
         ckpt = CHECKPOINTS.get(backbone_name, "")
         if not os.path.exists(ckpt):
-            print(f"  ⚠️  Checkpoint not found, skipping: {backbone_name}  ({ckpt})")
+            print(f"    Checkpoint not found, skipping: {backbone_name}  ({ckpt})")
             continue
 
         out_dir = OUT_ROOT / tissue_name / backbone_name
@@ -274,7 +262,7 @@ def main():
         print()
 
     print(f"{'─'*70}")
-    print("✅  Done.\n")
+    print("  Done.\n")
     print("Tip: filenames encode confidence, e.g.:")
     print("  frame_0001__smoke94.3.png  → predicted smoke, 94.3% confident")
     print("  frame_0002__clean99.1.png  → predicted clean, 99.1% confident\n")
