@@ -1,5 +1,4 @@
 import sys
-# Clean ROS paths
 sys.path = [p for p in sys.path if "/opt/ros" not in p]
 
 import torch
@@ -12,9 +11,7 @@ from PIL import Image
 from sklearn.metrics import precision_score, recall_score
 import os
 
-# =========================
-# CONFIGURATION
-# =========================
+# config
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CSV_PATH = os.path.join(BASE_DIR, "../annotations/task_completion_labels2.csv")
 BATCH_SIZE = 32
@@ -23,9 +20,7 @@ EPOCHS = 30
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 MODEL_SAVE_PATH = "best_vit_task_completion.pth"
 
-# =========================
-# 1. DATASET CLASS
-# =========================
+# dataset class
 class TaskCompletionDataset(Dataset):
     def __init__(self, csv_file, transform=None):
         if not os.path.exists(csv_file):
@@ -35,7 +30,7 @@ class TaskCompletionDataset(Dataset):
         self.transform = transform
         self.target_col = 'progress' 
 
-        print(f"📊 Dataset: {len(self.df)} samples.")
+        print(f" Dataset: {len(self.df)} samples.")
 
     def __len__(self):
         return len(self.df)
@@ -56,9 +51,7 @@ class TaskCompletionDataset(Dataset):
         
         return image, torch.tensor(label, dtype=torch.long)
 
-# =========================
-# 2. AUGMENTATIONS & LOADING
-# =========================
+# augmentations and loading
 # ViT is very data-hungry, so keeping the jitters helps
 data_transforms = transforms.Compose([
     transforms.Resize((224, 224)),
@@ -75,9 +68,7 @@ train_set, val_set = torch.utils.data.random_split(full_dataset, [train_size, le
 train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=4)
 val_loader = DataLoader(val_set, batch_size=BATCH_SIZE, shuffle=False, num_workers=4)
 
-# =========================
-# 3. MODEL SETUP (Vision Transformer)
-# =========================
+# model set up vit
 model = models.vit_b_16(weights=models.ViT_B_16_Weights.DEFAULT)
 
 # Adjust the head for 2 classes
@@ -90,12 +81,10 @@ weights = torch.tensor([12.0, 1.0]).to(DEVICE)
 criterion = nn.CrossEntropyLoss(weight=weights)
 optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE)
 
-# =========================
-# 4. TRAINING LOOP
-# =========================
+# train
 best_val_loss = float('inf')
 
-print(f"🚀 Training Vision Transformer (ViT) on {DEVICE}...")
+print(f" Training Vision Transformer (ViT) on {DEVICE}...")
 
 for epoch in range(EPOCHS):
     model.train()
@@ -114,7 +103,7 @@ for epoch in range(EPOCHS):
         train_total += labels.size(0)
         train_correct += (predicted == labels).sum().item()
 
-    # --- VALIDATION ---
+    # val
     model.eval()
     val_loss, val_correct, val_total = 0.0, 0, 0
     all_preds, all_labels = [], []
@@ -148,6 +137,6 @@ for epoch in range(EPOCHS):
     if avg_val_loss < best_val_loss:
         best_val_loss = avg_val_loss
         torch.save(model.state_dict(), MODEL_SAVE_PATH)
-        print(f"  ⭐ Best Model Saved")
+        print(f"   Best Model Saved")
 
 print("\nTraining Complete.")
