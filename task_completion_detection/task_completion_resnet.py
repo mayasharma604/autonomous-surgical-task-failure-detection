@@ -12,9 +12,7 @@ from PIL import Image
 from sklearn.metrics import precision_score, recall_score
 import os
 
-# =========================
-# CONFIGURATION
-# =========================
+# config
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CSV_PATH = os.path.join(BASE_DIR, "../annotations/task_completion_labels2.csv")
 BATCH_SIZE = 32
@@ -23,9 +21,7 @@ EPOCHS = 30
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 MODEL_SAVE_PATH = "best_resnet18_task_completion.pth"
 
-# =========================
-# 1. DATASET CLASS
-# =========================
+# dataset class
 class TaskCompletionDataset(Dataset):
     def __init__(self, csv_file, transform=None):
         if not os.path.exists(csv_file):
@@ -37,7 +33,7 @@ class TaskCompletionDataset(Dataset):
         # Numerical progress column from your CSV
         self.target_col = 'progress' 
 
-        print(f"📊 Dataset: {len(self.df)} samples.")
+        print(f" Dataset: {len(self.df)} samples.")
         print(f"   Targeting binary classes from '{self.target_col}' column.")
 
     def __len__(self):
@@ -59,9 +55,7 @@ class TaskCompletionDataset(Dataset):
         
         return image, torch.tensor(label, dtype=torch.long)
 
-# =========================
-# 2. AUGMENTATIONS & LOADING
-# =========================
+# augmentation and loading
 data_transforms = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.RandomHorizontalFlip(),
@@ -77,9 +71,7 @@ train_set, val_set = torch.utils.data.random_split(full_dataset, [train_size, le
 train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=4)
 val_loader = DataLoader(val_set, batch_size=BATCH_SIZE, shuffle=False, num_workers=4)
 
-# =========================
-# 3. MODEL SETUP (ResNet-18)
-# =========================
+# model set up
 # Using ResNet-18 for a good balance of speed and accuracy
 model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
 num_ftrs = model.fc.in_features
@@ -92,12 +84,10 @@ weights = torch.tensor([12.0, 1.0]).to(DEVICE)
 criterion = nn.CrossEntropyLoss(weight=weights)
 optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE)
 
-# =========================
-# 4. TRAINING LOOP
-# =========================
+#training loop
 best_val_loss = float('inf')
 
-print(f"🚀 Training ResNet-18 on {DEVICE}...")
+print(f" Training ResNet-18 on {DEVICE}...")
 
 for epoch in range(EPOCHS):
     model.train()
@@ -116,7 +106,7 @@ for epoch in range(EPOCHS):
         train_total += labels.size(0)
         train_correct += (predicted == labels).sum().item()
 
-    # --- VALIDATION ---
+    # val
     model.eval()
     val_loss, val_correct, val_total = 0.0, 0, 0
     all_preds, all_labels = [], []
@@ -150,6 +140,6 @@ for epoch in range(EPOCHS):
     if avg_val_loss < best_val_loss:
         best_val_loss = avg_val_loss
         torch.save(model.state_dict(), MODEL_SAVE_PATH)
-        print(f"  ⭐ Best Model Saved")
+        print(f"   Best Model Saved")
 
 print("\nTraining Complete.")
