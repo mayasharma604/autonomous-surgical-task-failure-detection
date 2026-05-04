@@ -1,8 +1,6 @@
 import pandas as pd
 
-# =========================
-# CONFIGURATION
-# =========================
+# config
 INFERENCE_CSV = "tissue2_full_sequence_inference.csv"
 
 # Adjusted ranges to ensure total coverage from 0.0 to 0.9
@@ -16,14 +14,14 @@ def analyze_total_accuracy(csv_path):
     try:
         df = pd.read_csv(csv_path)
     except FileNotFoundError:
-        print(f"❌ File not found: {csv_path}")
+        print(f"File not found: {csv_path}")
         return
 
     phase_stats = []
     total_frames_all_phases = 0
     total_correct_all_phases = 0
 
-    print(f"📊 Analyzing Accuracy for: {csv_path}\n")
+    print(f" Analyzing Accuracy for: {csv_path}\n")
 
     for phase, (low, high) in IDEAL_RANGES.items():
         # Match phase name (case-insensitive and partial match to handle folder variations)
@@ -46,9 +44,7 @@ def analyze_total_accuracy(csv_path):
             "Accuracy": round((in_range / count) * 100, 2)
         })
 
-    # =========================
-    # DISPLAY RESULTS
-    # =========================
+    # display results
     print("--- Per-Phase Breakdown ---")
     for stat in phase_stats:
         print(f"{stat['Phase']:<20} | Frames: {stat['Frames']:<5} | Accuracy: {stat['Accuracy']}%")
@@ -62,15 +58,15 @@ def analyze_total_accuracy(csv_path):
         
         # Verdict
         if total_accuracy >= 85:
-            print("🚀 Result: Exceptional. No retraining needed.")
+            print(" Result: Exceptional. No retraining needed.")
         elif total_accuracy >= 70:
-            print("📈 Result: Good. Model is capturing the resection timeline well.")
+            print(" Result: Good. Model is capturing the resection timeline well.")
         elif total_accuracy >= 50:
-            print("⚠️ Result: Moderate. Significant overlap between phases.")
+            print(" Result: Moderate. Significant overlap between phases.")
         else:
-            print("🆘 Result: Low. You should definitely retrain with the 2-4 Phase CSV.")
+            print(" Result: Low. Retrain with the 2-4 Phase CSV.")
     else:
-        print("❌ No matching phases found in CSV to calculate accuracy.")
+        print(" No matching phases found in CSV to calculate accuracy.")
 
 if __name__ == "__main__":
     analyze_total_accuracy(INFERENCE_CSV)
