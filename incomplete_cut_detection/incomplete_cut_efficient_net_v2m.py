@@ -131,7 +131,7 @@ best_val_loss = float('inf')
 total_eps = PHASE1_EPOCHS + PHASE2_EPOCHS
 
 # --- PHASE 1 ---
-print("\n🧊 PHASE 1: Backbone Frozen")
+print("\n PHASE 1: Backbone Frozen")
 for param in model.features.parameters():
     param.requires_grad = False
 optimizer = optim.Adam(model.classifier.parameters(), lr=PHASE1_LR)
@@ -149,7 +149,7 @@ for epoch in range(PHASE1_EPOCHS):
         torch.save(model.state_dict(), MODEL_SAVE_PATH)
 
 # --- PHASE 2 ---
-print("\n🔥 PHASE 2: Full Fine-Tuning")
+print("\nPHASE 2: Full Fine-Tuning")
 for param in model.parameters():
     param.requires_grad = True
 optimizer = optim.AdamW(model.parameters(), lr=PHASE2_LR)
@@ -166,4 +166,4 @@ for epoch in range(PHASE2_EPOCHS):
     if v_loss < best_val_loss:
         best_val_loss = v_loss
         torch.save(model.state_dict(), MODEL_SAVE_PATH)
-        print("  ⭐ Best Model Saved!")
+        print("  Best Model Saved!")
