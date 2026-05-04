@@ -13,9 +13,7 @@ from PIL import Image
 import os
 import numpy as np
 
-# =========================
-# CONFIGURATION
-# =========================
+# config
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CSV_PATH = os.path.join(BASE_DIR, "../annotations/incomplete_cut_labels2.csv")
 BATCH_SIZE = 16 
@@ -26,9 +24,7 @@ PHASE2_EPOCHS = 35
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 MODEL_SAVE_PATH = "best_vit_incomplete_cut_regression.pth"
 
-# =========================
-# 1. DATASET CLASS
-# =========================
+# dataset class
 class SurgicalProgressDataset(Dataset):
     def __init__(self, csv_file, transform=None):
         self.df = pd.read_csv(csv_file)
@@ -48,9 +44,7 @@ class SurgicalProgressDataset(Dataset):
             image = self.transform(image)
         return image, torch.tensor(label, dtype=torch.float32)
 
-# =========================
-# 2. AUGMENTATIONS
-# =========================
+# augmentations
 data_transforms = transforms.Compose([
     transforms.Resize((224, 224)), 
     transforms.RandomHorizontalFlip(),
@@ -67,9 +61,7 @@ train_set, val_set = torch.utils.data.random_split(dataset, [train_size, val_siz
 train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=4)
 val_loader = DataLoader(val_set, batch_size=BATCH_SIZE, shuffle=False, num_workers=4)
 
-# =========================
-# 3. MODEL SETUP (ViT Split)
-# =========================
+# model setup (vit split)
 model = models.vit_b_16(weights=models.ViT_B_16_Weights.DEFAULT)
 
 # Adjust the head for regression
@@ -81,9 +73,7 @@ model.heads.head = nn.Sequential(
 model = model.to(DEVICE)
 criterion = nn.MSELoss()
 
-# =========================
-# 4. SHARED EPOCH FUNCTION
-# =========================
+# shared epoch function
 def run_epoch(optimizer, loader, is_train=True):
     if is_train:
         model.train()
@@ -128,13 +118,11 @@ def run_epoch(optimizer, loader, is_train=True):
     
     return avg_loss, acc, prec, rec
 
-# =========================
-# 5. EXECUTION
-# =========================
+# execute model
 best_val_loss = float('inf')
 total_eps = PHASE1_EPOCHS + PHASE2_EPOCHS
 
-# --- PHASE 1 ---
+# phase 1 warm up
 print("\n PHASE 1: Training Head Only (ViT Backbone Frozen)")
 for name, param in model.named_parameters():
     if "heads" not in name:
@@ -156,7 +144,7 @@ for epoch in range(PHASE1_EPOCHS):
         best_val_loss = v_loss
         torch.save(model.state_dict(), MODEL_SAVE_PATH)
 
-# --- PHASE 2 ---
+# phase 2
 print("\nPHASE 2: Full Fine-Tuning (Transformers Unfrozen)")
 for param in model.parameters():
     param.requires_grad = True
