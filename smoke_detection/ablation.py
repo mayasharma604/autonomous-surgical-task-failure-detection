@@ -24,28 +24,24 @@ from sklearn.metrics import (
     confusion_matrix, ConfusionMatrixDisplay
 )
 
-# ──────────────────────────────────────────────
-# CONFIGURATION  ← edit these paths before running
-# ──────────────────────────────────────────────
+# config
 
 # Artificially introduced smoke images for training (5 datasets)
 TRAIN_SMOKE_DIR = "/data/CIS2/smoke_detection/smokeTrain"
 
-# Training CSV — annotated frames from training tissues only
+# Training CSV, annotated frames from training tissues only
 TRAIN_CSV = "/data/CIS2/smoke_detection/annotations.csv"
 
-# Validation CSV — clean frames from held-out tissues (no smoke frames here)
+# Validation CSV
 VAL_CSV       = "/data/CIS2/smoke_detection/annotations_val.csv"
 
-# Validation smoke folder — smoke frames for validation (separate from training)
+# Validation smoke folder, smoke frames for validation (separate from training)
 VAL_SMOKE_DIR = "/data/CIS2/smoke_detection/smokeVal"
 
-# ──────────────────────────────────────────────
-# HYPER-PARAMETERS
-# ──────────────────────────────────────────────
+# hyper paramters for tuning
 
-STAGE1_EPOCHS = 10          # backbone frozen
-STAGE2_EPOCHS = 10          # full fine-tune  (total = 20)
+STAGE1_EPOCHS = 10         
+STAGE2_EPOCHS = 10         
 BATCH_SIZE    = 16
 WEIGHT_DECAY  = 1e-4
 NUM_WORKERS   = 4
@@ -53,16 +49,14 @@ SEED          = 42
 DEVICE        = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 OUT_DIR       = Path("./ablation_output")
 
-# Per-backbone settings  (img_size, lr_head, lr_full)
+# Per-backbone settings 
 BACKBONE_CFG = {
     "resnet50":      {"img_size": 224, "lr_head": 1e-3, "lr_full": 1e-4},
     "vit_b16":       {"img_size": 224, "lr_head": 1e-3, "lr_full": 5e-5},
     "efficientnet_b0": {"img_size": 224, "lr_head": 1e-3, "lr_full": 1e-4},
 }
 
-# ──────────────────────────────────────────────
-# HELPERS
-# ──────────────────────────────────────────────
+# helper functions
 
 def set_seed(seed: int):
     torch.manual_seed(seed)
@@ -111,9 +105,7 @@ def load_csv(csv_path: str) -> tuple:
     return smoke_paths, clean_paths
 
 
-# ──────────────────────────────────────────────
-# DATASET
-# ──────────────────────────────────────────────
+# dataset
 
 class SmokeDataset(Dataset):
     """label 1 = bad (smoke) | label 0 = good (no smoke)"""
@@ -156,9 +148,7 @@ def build_transforms(train: bool, img_size: int) -> transforms.Compose:
     ])
 
 
-# ──────────────────────────────────────────────
-# MODEL FACTORY
-# ──────────────────────────────────────────────
+# model
 
 def build_model(backbone_name: str) -> nn.Module:
     if backbone_name == "resnet50":
@@ -207,9 +197,7 @@ def unfreeze_all(model: nn.Module):
         param.requires_grad = True
 
 
-# ──────────────────────────────────────────────
-# EPOCH RUNNER
-# ──────────────────────────────────────────────
+#epochs
 
 def run_epoch(model, loader, criterion, optimizer=None, train=True):
     model.train() if train else model.eval()
@@ -239,9 +227,7 @@ def run_epoch(model, loader, criterion, optimizer=None, train=True):
     return avg_loss, prec, rec, acc, all_labels, all_preds
 
 
-# ──────────────────────────────────────────────
-# TRAIN ONE BACKBONE
-# ──────────────────────────────────────────────
+# training
 
 def train_backbone(backbone_name, train_smoke, val_smoke, train_clean, val_clean):
     cfg      = BACKBONE_CFG[backbone_name]
@@ -284,7 +270,7 @@ def train_backbone(backbone_name, train_smoke, val_smoke, train_clean, val_clean
         print(f"{epoch:>5} {stage:>6} | {tr:>10.4f} {vl:>10.4f} | "
               f"{p:>9.4f} {r:>7.4f} {a:>9.4f}")
 
-    # ── Stage 1: frozen backbone ─────────────
+    # frozen backbone
     freeze_backbone(model, backbone_name)
     opt1 = optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()),
                        lr=lr_head, weight_decay=WEIGHT_DECAY)
@@ -300,7 +286,7 @@ def train_backbone(backbone_name, train_smoke, val_smoke, train_clean, val_clean
         final_labels, final_preds = vl, vp
         log_row(epoch, "S1", tr_loss, vl_loss, prec, rec, acc)
 
-    # ── Stage 2: full fine-tune ──────────────
+    # full fine tuning
     unfreeze_all(model)
     opt2 = optim.AdamW(model.parameters(), lr=lr_full, weight_decay=WEIGHT_DECAY)
     sch2 = optim.lr_scheduler.CosineAnnealingLR(opt2, T_max=STAGE2_EPOCHS)
@@ -318,14 +304,12 @@ def train_backbone(backbone_name, train_smoke, val_smoke, train_clean, val_clean
     # Save checkpoint
     ckpt = OUT_DIR / f"{backbone_name}_smoke_detector.pth"
     torch.save(model.state_dict(), ckpt)
-    print(f"\n💾  Saved → {ckpt}")
+    print(f"\nSaved → {ckpt}")
 
     return history, final_labels, final_preds
 
 
-# ──────────────────────────────────────────────
-# PLOTTING
-# ──────────────────────────────────────────────
+# plots to save
 
 COLORS = {
     "resnet50":        "#4C72B0",
@@ -379,7 +363,7 @@ def save_individual_plots(backbone_name, history, val_labels, val_preds):
     plt.savefig(bdir / "confusion_matrix.png", dpi=150)
     plt.close()
 
-    print(f"  📊  {name} plots saved → {bdir}/")
+    print(f"  {name} plots saved → {bdir}/")
 
 
 def save_comparison_plot(all_histories, all_labels, all_preds):
@@ -423,7 +407,7 @@ def save_comparison_plot(all_histories, all_labels, all_preds):
     out_path = OUT_DIR / "ablation_comparison.png"
     plt.savefig(out_path, dpi=150, bbox_inches="tight")
     plt.close()
-    print(f"\n🏆  Ablation comparison chart saved → {out_path}")
+    print(f"\nAblation comparison chart saved → {out_path}")
 
 
 def print_final_summary(all_histories, all_labels, all_preds):
@@ -443,17 +427,15 @@ def print_final_summary(all_histories, all_labels, all_preds):
     print(f"{'═'*72}\n")
 
 
-# ──────────────────────────────────────────────
-# MAIN
-# ──────────────────────────────────────────────
+# main
 
 def main():
     set_seed(SEED)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    print(f"\n🖥️  Device: {DEVICE}")
+    print(f"\n  Device: {DEVICE}")
 
     # Collect paths once — reused across all backbones
-    print("\n📂 Collecting image paths ...")
+    print("\n Collecting image paths ...")
 
     # Smoke: artificially introduced training datasets
     smoke_train_dir = collect_smoke_images(TRAIN_SMOKE_DIR)
@@ -488,7 +470,7 @@ def main():
 
     save_comparison_plot(all_histories, all_labels, all_preds)
     print_final_summary(all_histories, all_labels, all_preds)
-    print("✅  Ablation study complete.\n")
+    print(" Ablation study complete.\n")
 
 
 if __name__ == "__main__":
