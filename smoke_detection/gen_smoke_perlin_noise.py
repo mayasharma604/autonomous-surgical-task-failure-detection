@@ -17,9 +17,7 @@ except ImportError:
     print("[WARN] Install 'noise' for better realism: pip install noise")
 
 
-# ─────────────────────────────────────────────
-# Base noise
-# ─────────────────────────────────────────────
+# base noise
 
 def _perlin_smoke_mask(h, w, scale=80, octaves=6):
     mask = np.zeros((h, w), dtype=np.float32)
@@ -46,9 +44,7 @@ def _numpy_smoke_mask(h, w):
     return mask
 
 
-# ─────────────────────────────────────────────
-# Improved smoke generation
-# ─────────────────────────────────────────────
+# improved smoke generation
 
 def generate_smoke_mask(h, w, density=1.0, spread=0.9):
     # Base noise
@@ -61,19 +57,19 @@ def generate_smoke_mask(h, w, density=1.0, spread=0.9):
     threshold = 1.0 - spread
     alpha = np.clip((alpha - threshold) / (1 - threshold + 1e-8), 0, 1)
 
-    # ── Multi-scale structure (BIG improvement)
+    # multi scale structure
     alpha_large = cv2.GaussianBlur(alpha, (0, 0), sigmaX=10, sigmaY=10)
     alpha_small = cv2.GaussianBlur(alpha, (0, 0), sigmaX=3, sigmaY=3)
     alpha = 0.7 * alpha_large + 0.3 * alpha_small
 
-    # ── Nonlinear contrast (wispy vs dense)
+    # nonlinear contrast
     alpha = alpha ** 0.2
 
-    # ── Directional flow (rising smoke)
+    # directional flow
     for i in range(3):
         alpha = 0.8 * alpha + 0.2 * np.roll(alpha, shift=-5 * (i + 1), axis=0)
 
-    # ── Localized plume (not full-frame fog)
+    # localized plume
     center_x = random.randint(w // 4, 3 * w // 4)
     center_y = random.randint(h // 4, 3 * h // 4)
 
@@ -123,9 +119,7 @@ def apply_smoke(image_bgr, density=1.0, spread=0.9):
     return out_final
 
 
-# ─────────────────────────────────────────────
-# Random params
-# ─────────────────────────────────────────────
+# random parameters
 
 def random_smoke_params():
     return dict(
@@ -134,9 +128,7 @@ def random_smoke_params():
     )
 
 
-# ─────────────────────────────────────────────
-# Dataset builder
-# ─────────────────────────────────────────────
+# dataset builder
 
 SUPPORTED_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}
 
@@ -183,12 +175,10 @@ def build_dataset(input_dir, output_dir, augment_factor=2):
         writer.writerow(["path", "label"])
         writer.writerows(records)
 
-    print(f"\n✅ Dataset complete: {csv_path}")
+    print(f"\n Dataset complete: {csv_path}")
 
 
-# ─────────────────────────────────────────────
 # CLI
-# ─────────────────────────────────────────────
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
