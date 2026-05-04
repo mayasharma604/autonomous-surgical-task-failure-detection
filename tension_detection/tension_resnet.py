@@ -13,11 +13,11 @@ sys.path.append("/data/tensionData/training/shared")
 import tension_training as tt
 class SqueezeTime(nn.Module):
     def forward(self, x):
-        return x.squeeze(1) # Removes the dimension at index 1 (Time dimension for 1-frame windows)
+        return x.squeeze(1)
 
-# =========================
-# Config
-# =========================
+# config
+
+
 WORKSPACE_ROOT = '/data/tensionData'
 WINDOW_SIZE = 1        
 PREDICT_FRAMES = 1
@@ -25,31 +25,27 @@ BATCH_SIZE = 64
 NUM_WORKERS = 12       
 LEARNING_RATE = 1e-4
 IMG_SIZE = 224
-EPOCHS = 20 # Increased slightly for Trial Split convergence
+EPOCHS = 20
 DEVICE = tt.setup_device(seed=42)
 MODEL_SAVE_PATH = "best_resnet18_tension_trial_split.pth"
 
-# =========================
-# Prepare masks & clips (Trial-Based Split)
-# =========================
+# masks and clips
+# trial based split
 mask_lookup = tt.make_mask_lookup(WORKSPACE_ROOT)
 seg_mask_lookup = tt.make_seg_mask_lookup(WORKSPACE_ROOT)
 
 clips = tt.index_all_clips(WORKSPACE_ROOT, mask_lookup, min_clip_len=WINDOW_SIZE)
 
-# CRITICAL: This performs the split by Trial ID, not by individual frames
 train_clips, val_clips = tt.split_clips_by_trial(clips)
 
 train_windows = tt.build_windows(train_clips, WINDOW_SIZE, PREDICT_FRAMES)
 val_windows = tt.build_windows(val_clips, WINDOW_SIZE, PREDICT_FRAMES)
 
-# Balance to ensure the model doesn't just guess "No Tension"
+# Balance 
 train_windows = tt.balance_windows(train_windows, PREDICT_FRAMES)
 val_windows = tt.balance_windows(val_windows, PREDICT_FRAMES)
 
-# =========================
-# Loaders
-# =========================
+# loaders
 train_loader, val_loader, train_ds, val_ds = tt.make_loaders(
     train_windows, val_windows,
     BATCH_SIZE, NUM_WORKERS,
@@ -59,9 +55,7 @@ train_loader, val_loader, train_ds, val_ds = tt.make_loaders(
     dual_stream=True
 )
 
-# =========================
-# Model
-# =========================
+# model training
 from torchvision.models import resnet18
 
 base_model = resnet18(weights=None) 
@@ -74,19 +68,15 @@ model = nn.Sequential(
     base_model
 ).to(DEVICE)
 
-# =========================
-# Optimizer & Loss
-# =========================
+# loss and opti
 optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=2, factor=0.5)
 criterion = nn.BCEWithLogitsLoss() # Better for binary precision/recall tasks
 
-# =========================
-# Custom Training Loop for CIS Metrics
-# =========================
+# custom training loop
 best_val_loss = float('inf')
 
-print(f"\n🚀 Starting Tension Training (Trial Split)")
+print(f"\n Starting Tension Training (Trial Split)")
 print(f"Train Windows: {len(train_windows)} | Val Windows: {len(val_windows)}\n")
 
 for epoch in range(EPOCHS):
@@ -116,7 +106,7 @@ for epoch in range(EPOCHS):
     avg_train_loss = train_loss / len(train_loader)
     train_acc = (correct_t / total_t) * 100
 
-    # --- Validation ---
+    # val
     model.eval()
     val_loss = 0.0
     all_preds = []
@@ -139,7 +129,7 @@ for epoch in range(EPOCHS):
     all_preds = np.array(all_preds).flatten()
     all_labels = np.array(all_labels).flatten()
     
-    # Calculate CIS Metrics
+    # calculate metrics
     val_acc = (all_preds == all_labels).mean() * 100
     val_prec = precision_score(all_labels, all_preds, zero_division=0)
     val_rec = recall_score(all_labels, all_preds, zero_division=0)
@@ -149,10 +139,10 @@ for epoch in range(EPOCHS):
     print(f"  Val Loss: {avg_val_loss:.4f} | Val Acc: {val_acc:.2f}%")
     print(f"  Val Precision: {val_prec:.4f} | Val Recall: {val_rec:.4f}")
 
-    # Save Best Model
+    # save best model
     if avg_val_loss < best_val_loss:
         best_val_loss = avg_val_loss
         torch.save(base_model.state_dict(), MODEL_SAVE_PATH)
-        print(f"  ⭐ Best Model Saved to {MODEL_SAVE_PATH}")
+        print(f"   Best Model Saved to {MODEL_SAVE_PATH}")
     
     scheduler.step(avg_val_loss)
