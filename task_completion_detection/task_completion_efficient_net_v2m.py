@@ -23,9 +23,7 @@ class SqueezeTime(nn.Module):
     def forward(self, x):
         return x.squeeze(1) 
 
-# =========================
-# Config
-# =========================
+# config
 WORKSPACE_ROOT = '/data/tensionData'
 WINDOW_SIZE = 1 
 PREDICT_FRAMES = 1
@@ -36,9 +34,7 @@ IMG_SIZE = 224
 EPOCHS = 10
 DEVICE = tt.setup_device(seed=42)
 
-# =========================
-# Prepare masks & clips
-# =========================
+# masks and clips
 mask_lookup = tt.make_mask_lookup(WORKSPACE_ROOT)
 seg_mask_lookup = tt.make_seg_mask_lookup(WORKSPACE_ROOT)
 
@@ -54,9 +50,7 @@ val_windows = tt.build_windows(val_clips, WINDOW_SIZE, PREDICT_FRAMES)
 train_windows = tt.balance_windows(train_windows, PREDICT_FRAMES)
 val_windows = tt.balance_windows(val_windows, PREDICT_FRAMES)
 
-# =========================
-# Loaders
-# =========================
+# loaders
 train_loader, val_loader, train_ds, val_ds = tt.make_loaders(
     train_windows, val_windows,
     BATCH_SIZE, NUM_WORKERS,
@@ -66,9 +60,7 @@ train_loader, val_loader, train_ds, val_ds = tt.make_loaders(
     dual_stream=True
 )
 
-# =========================
-# Model: EfficientNetV2-M
-# =========================
+# model effnet v2m
 base_model = efficientnet_v2_m(weights=None) 
 
 original_conv = base_model.features[0][0]
@@ -89,15 +81,11 @@ model = nn.Sequential(
     base_model
 ).to(DEVICE)
 
-# =========================
-# Optimizer & Scheduler
-# =========================
+# optimizer and scheduler
 optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=2, factor=0.5)
 
-# =========================
-# Training loop
-# =========================
+# training loop
 tt.train(
     model=model,
     raw_model=base_model,
@@ -112,9 +100,7 @@ tt.train(
     early_stop_patience=5
 )
 
-# =========================
-# MANUAL FINAL EVALUATION (FIXED)
-# =========================
+# manual final eval
 print("\n" + "="*40)
 print("FORCE-CALCULATING BINARY METRICS")
 print("="*40)
@@ -139,12 +125,12 @@ if os.path.exists(best_path):
 
     try:
         model.load_state_dict(new_state_dict)
-        print("✅ Successfully matched and loaded model weights.")
+        print(" Successfully matched and loaded model weights.")
     except RuntimeError as e:
-        print(f"⚠️ Direct load failed, trying base_model load: {e}")
+        print(f" Direct load failed, trying base_model load: {e}")
         # Fallback: Load directly into the base_model part of our Sequential
         model[1].load_state_dict(state_dict)
-        print("✅ Successfully loaded weights into base_model.")
+        print(" Successfully loaded weights into base_model.")
 
     model.eval()
     all_preds = []
