@@ -12,9 +12,7 @@ import os
 import numpy as np
 from sklearn.metrics import precision_score, recall_score
 
-# =========================
-# CONFIGURATION
-# =========================
+# config
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CSV_PATH = os.path.join(BASE_DIR, "../annotations/incomplete_cut_labels2.csv")
 BATCH_SIZE = 16 
@@ -25,14 +23,12 @@ PHASE2_EPOCHS = 45 # Total 50
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 MODEL_SAVE_PATH = "best_v2m_incomplete_cut_regression.pth"
 
-# =========================
-# 1. DATASET CLASS
-# =========================
+# data set class
 class ProgressRegressionDataset(Dataset):
     def __init__(self, csv_file, transform=None):
         self.df = pd.read_csv(csv_file)
         self.transform = transform
-        print(f"📊 V2-M Dataset Loaded: {len(self.df)} images.")
+        print(f" V2-M Dataset Loaded: {len(self.df)} images.")
 
     def __len__(self):
         return len(self.df)
@@ -49,9 +45,7 @@ class ProgressRegressionDataset(Dataset):
             image = self.transform(image)
         return image, torch.tensor(label, dtype=torch.float32)
 
-# =========================
-# 2. AUGMENTATIONS
-# =========================
+# augmentations
 data_transforms = transforms.Compose([
     transforms.Resize((480, 480)), 
     transforms.RandomHorizontalFlip(),
@@ -68,9 +62,7 @@ train_set, val_set = torch.utils.data.random_split(dataset, [train_size, val_siz
 train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=4)
 val_loader = DataLoader(val_set, batch_size=BATCH_SIZE, shuffle=False, num_workers=4)
 
-# =========================
-# 3. MODEL SETUP (V2-M)
-# =========================
+# model set up v2m
 model = models.efficientnet_v2_m(weights=models.EfficientNet_V2_M_Weights.DEFAULT)
 
 # Head setup for regression
@@ -82,9 +74,7 @@ model.classifier[1] = nn.Sequential(
 model = model.to(DEVICE)
 criterion = nn.MSELoss()
 
-# =========================
-# 4. SHARED EPOCH FUNCTION
-# =========================
+# shared epoch
 def run_epoch(optimizer, loader, is_train=True):
     if is_train:
         model.train()
@@ -124,13 +114,11 @@ def run_epoch(optimizer, loader, is_train=True):
     
     return avg_loss, acc, prec, rec
 
-# =========================
-# 5. EXECUTION
-# =========================
+# execution
 best_val_loss = float('inf')
 total_eps = PHASE1_EPOCHS + PHASE2_EPOCHS
 
-# --- PHASE 1 ---
+# phase 1
 print("\n PHASE 1: Backbone Frozen")
 for param in model.features.parameters():
     param.requires_grad = False
@@ -148,7 +136,7 @@ for epoch in range(PHASE1_EPOCHS):
         best_val_loss = v_loss
         torch.save(model.state_dict(), MODEL_SAVE_PATH)
 
-# --- PHASE 2 ---
+# phase 2
 print("\nPHASE 2: Full Fine-Tuning")
 for param in model.parameters():
     param.requires_grad = True
