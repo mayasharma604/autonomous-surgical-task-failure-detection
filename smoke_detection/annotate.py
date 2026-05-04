@@ -41,9 +41,7 @@ from rich.panel import Panel
 from rich.rule import Rule
 from rich import box
 
-# ──────────────────────────────────────────────
-# CONFIGURATION
-# ──────────────────────────────────────────────
+# config
 
 DEFAULT_CSV    = Path("./annotations.csv")
 DEFAULT_STRIDE = 15          # frames auto-filled per keypress
@@ -51,9 +49,7 @@ CSV_FIELDS     = ["path", "label", "annotated_at"]
 
 console = Console()
 
-# ──────────────────────────────────────────────
-# KEYBOARD  (handles arrow keys too)
-# ──────────────────────────────────────────────
+# keyboard annotation handling
 
 def getch() -> str:
     """
@@ -65,7 +61,7 @@ def getch() -> str:
     try:
         tty.setraw(fd)
         ch = sys.stdin.read(1)
-        if ch == "\x1b":                    # escape — maybe arrow key
+        if ch == "\x1b":                   
             ch2 = sys.stdin.read(1)
             if ch2 == "[":
                 ch3 = sys.stdin.read(1)
@@ -80,9 +76,7 @@ def getch() -> str:
         termios.tcsetattr(fd, termios.TCSADRAIN, old)
     return ch
 
-# ──────────────────────────────────────────────
-# IMAGE COLLECTION  (3_resect only)
-# ──────────────────────────────────────────────
+# image collection for 3_resect only
 
 def collect_frames(tissue_dir: str) -> list:
     pattern = os.path.join(tissue_dir, "3_resect", "*", "endoscope", "*.png")
@@ -92,9 +86,7 @@ def collect_frames(tissue_dir: str) -> list:
         frames   = sorted(glob.glob(pattern2))
     return frames
 
-# ──────────────────────────────────────────────
-# CSV HELPERS
-# ──────────────────────────────────────────────
+# csv helpers
 
 def load_existing(csv_path: Path) -> dict:
     existing = {}
@@ -118,16 +110,11 @@ def rewrite_csv(csv_path: Path, existing: dict):
                 "annotated_at": datetime.now().isoformat(timespec="seconds"),
             })
 
-# ──────────────────────────────────────────────
-# VS CODE
-# ──────────────────────────────────────────────
 
 def open_in_vscode(path: str):
     os.system(f'code --reuse-window "{path}" 2>/dev/null')
 
-# ──────────────────────────────────────────────
 # UI
-# ──────────────────────────────────────────────
 
 def progress_bar(done: int, total: int, width: int = 40) -> str:
     filled = int(width * done / total) if total else 0
@@ -173,8 +160,8 @@ def render_ui(frames: list, idx: int, existing: dict,
     # Stats
     stats = Table.grid(padding=(0, 5))
     stats.add_row(
-        f"[bold red]🔴 Smoke[/bold red]  [white]{n_smoke}[/white]",
-        f"[bold green]🟢 Clean[/bold green]  [white]{n_clean}[/white]",
+        f"[bold red]Smoke[/bold red]  [white]{n_smoke}[/white]",
+        f"[bold green] Clean[/bold green]  [white]{n_clean}[/white]",
         f"[dim]Unlabeled  {n_skip}[/dim]",
         f"[dim]Stride  {stride}[/dim]",
     )
@@ -244,9 +231,7 @@ def render_ui(frames: list, idx: int, existing: dict,
     console.print()
     console.print("  [dim italic]Frame opens in VS Code automatically →[/dim italic]")
 
-# ──────────────────────────────────────────────
-# ANNOTATION LOOP
-# ──────────────────────────────────────────────
+# annotation loop
 
 def annotate(tissue_dir: str, csv_path: Path, resume: bool, stride: int):
 
@@ -295,7 +280,7 @@ def annotate(tissue_dir: str, csv_path: Path, resume: bool, stride: int):
 
         key = getch()
 
-        # ── Label + auto-fill ─────────────────────────────────────
+        # label and auto fill
         if key in ("0", "1"):
             label    = int(key)
             label_word = "[red]SMOKE[/red]" if label == 1 else "[green]CLEAN[/green]"
@@ -310,7 +295,7 @@ def annotate(tissue_dir: str, csv_path: Path, resume: bool, stride: int):
                 idx += 1
 
             else:
-                # Auto-fill: label current + next (stride-1) unlabeled frames
+                # label current + next (stride-1) unlabeled frames
                 filled   = 0
                 fill_idx = idx
                 while filled < stride and fill_idx < len(frames):
@@ -325,22 +310,22 @@ def annotate(tissue_dir: str, csv_path: Path, resume: bool, stride: int):
                 )
                 idx = fill_idx   # jump past the filled block
 
-        # ── Step back ────────────────────────────────────────────
+        # back
         elif key in ("[", "<left>"):
             idx         = max(0, idx - 1)
             last_action = f"[dim]← stepped back to frame {idx + 1}[/dim]"
 
-        # ── Step forward ─────────────────────────────────────────
+        # forward
         elif key in ("]", "<right>"):
             idx         = min(len(frames) - 1, idx + 1)
             last_action = f"[dim]→ stepped forward to frame {idx + 1}[/dim]"
 
-        # ── Skip ─────────────────────────────────────────────────
+        # skip
         elif key == "s":
             last_action = f"[yellow]⏭  Skipped[/yellow]  ← frame {idx + 1}"
             idx += 1
 
-        # ── Quit ─────────────────────────────────────────────────
+        # quit
         elif key == "q":
             break
 
@@ -360,18 +345,16 @@ def annotate(tissue_dir: str, csv_path: Path, resume: bool, stride: int):
     table = Table(box=box.SIMPLE_HEAVY, show_header=False)
     table.add_column("", style="dim")
     table.add_column("", justify="right", style="bold white")
-    table.add_row("🔴 Smoke",           str(n_smoke))
-    table.add_row("🟢 Clean",           str(n_clean))
-    table.add_row("📋 Total annotated", str(n_smoke + n_clean))
-    table.add_row("🔲 Unlabeled",       str(len(frames) - n_smoke - n_clean))
+    table.add_row("Smoke",           str(n_smoke))
+    table.add_row("Clean",           str(n_clean))
+    table.add_row("Total annotated", str(n_smoke + n_clean))
+    table.add_row("Unlabeled",       str(len(frames) - n_smoke - n_clean))
     console.print(table)
     console.print()
-    console.print(f"  [green]✅  CSV saved →[/green] [bold]{csv_path.resolve()}[/bold]")
+    console.print(f"  [green] CSV saved →[/green] [bold]{csv_path.resolve()}[/bold]")
     console.print()
 
-# ──────────────────────────────────────────────
-# MAIN
-# ──────────────────────────────────────────────
+# main
 
 def parse_args():
     parser = argparse.ArgumentParser(
