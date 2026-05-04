@@ -9,17 +9,13 @@ from PIL import Image
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
 
-# =========================
-# 1. Path Configuration
-# =========================
+# 1. path configuration
 BASE_DATA_DIR = "/data/CIS2/JHU-collision-CAO1_annotated"
 CHECKPOINT_DIR = "./checkpoints_collision"
 os.makedirs(CHECKPOINT_DIR, exist_ok=True)
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# =========================
-# 2. ResNet-18 Architecture
-# =========================
+# resnet-18 
 class BasicBlock(nn.Module):
     expansion = 1
     def __init__(self, in_channels, out_channels, stride=1):
@@ -73,9 +69,7 @@ class ResNet(nn.Module):
 def ResNet18():
     return ResNet(BasicBlock, [2,2,2,2])
 
-# =========================
-# 3. Trial-Aware Indexing
-# =========================
+# 3. trial-aware indexing
 def get_collision_files(base_path):
     all_trials = [d for d in os.listdir(base_path) if os.path.isdir(os.path.join(base_path, d))]
     train_trial_names, val_trial_names = train_test_split(all_trials, test_size=0.2, random_state=42)
@@ -87,6 +81,7 @@ def get_collision_files(base_path):
             for label_name in ['good', 'bad']:
                 label_path = os.path.join(trial_path, label_name)
                 if os.path.exists(label_path):
+                    # 0 is good, 1 is bad
                     label_idx = 0 if label_name == 'good' else 1
                     for img_name in os.listdir(label_path):
                         if img_name.lower().endswith(('.png', '.jpg', '.jpeg')):
@@ -95,9 +90,7 @@ def get_collision_files(base_path):
 
     return collect_from_trials(train_trial_names), collect_from_trials(val_trial_names)
 
-# =========================
-# 4. Dataset & Loaders
-# =========================
+# 4. dataset & loaders
 class CollisionDataset(Dataset):
     def __init__(self, image_list, transform=None):
         self.image_list = image_list
@@ -121,9 +114,7 @@ val_ds = CollisionDataset(val_files, transform=transform)
 train_loader = DataLoader(train_ds, batch_size=64, shuffle=True, num_workers=8)
 val_loader = DataLoader(val_ds, batch_size=64, shuffle=False, num_workers=8)
 
-# =========================
-# 5. Training Loop
-# =========================
+# 5. training loop
 model = ResNet18().to(DEVICE)
 criterion = nn.BCEWithLogitsLoss()
 optimizer = optim.Adam(model.parameters(), lr=1e-4)
@@ -132,10 +123,10 @@ best_val_loss = float('inf')
 patience = 5
 counter = 0
 
-print(f"🚀 Training on {len(train_files)} images | Validating on {len(val_files)} images...")
+print(f"Training on {len(train_files)} images | Validating on {len(val_files)} images...")
 
 for epoch in range(20):
-    # --- TRAINING PHASE ---
+    # training phase
     model.train()
     train_loss, train_correct, train_total = 0, 0, 0
     for imgs, labels in train_loader:
@@ -154,7 +145,7 @@ for epoch in range(20):
     avg_train_loss = train_loss / len(train_loader)
     avg_train_acc = train_correct / train_total
 
-    # --- VALIDATION PHASE ---
+    # validation phase
     model.eval()
     val_loss, val_correct, val_total = 0, 0, 0
     all_labels, all_preds = [], []
@@ -174,25 +165,25 @@ for epoch in range(20):
     avg_val_loss = val_loss / len(val_loader)
     avg_val_acc = val_correct / val_total
     
-    # Calculate Sklearn metrics for Validation
+    # get validation metrics
     prec = precision_score(all_labels, all_preds, zero_division=0)
     rec = recall_score(all_labels, all_preds, zero_division=0)
     f1 = f1_score(all_labels, all_preds, zero_division=0)
 
-    # --- PRINT METRICS ---
-    print(f"\n--- Epoch {epoch+1} ---")
+    # print metrics
+    print(f"\nEpoch {epoch+1}")
     print(f"TRAIN | Loss: {avg_train_loss:.4f} | Acc: {avg_train_acc:.2%}")
     print(f"VAL   | Loss: {avg_val_loss:.4f} | Acc: {avg_val_acc:.2%}")
     print(f"METRICS (Val) | Precision: {prec:.4f} | Recall: {rec:.4f} | F1: {f1:.4f}")
 
-    # --- SAVE BEST & EARLY STOP ---
+    # save best and check early stop
     if avg_val_loss < best_val_loss:
         best_val_loss = avg_val_loss
         counter = 0
         torch.save(model.state_dict(), os.path.join(CHECKPOINT_DIR, "best_collision_resnet.pth"))
-        print(">> [SAVED] Best model updated.")
+        print(">> saved best model")
     else:
         counter += 1
         if counter >= patience:
-            print(f"\n[EARLY STOP] No improvement for {patience} epochs.")
+            print(f"\nstopping early, no improvement for {patience} epochs.")
             break
