@@ -10,12 +10,9 @@ from torch.utils.data import Dataset, DataLoader, Subset
 from torchvision import transforms, models
 from sklearn.metrics import precision_score, recall_score, accuracy_score
 
-# Shield against ROS path conflicts on the server
 sys.path = [p for p in sys.path if "/opt/ros" not in p]
 
-# =========================
-# CONFIGURATION
-# =========================
+# config
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CSV_PATH = os.path.join(BASE_DIR, "../annotations/task_completion_labels2.csv")
 BATCH_SIZE = 32  
@@ -26,9 +23,7 @@ PHASE2_LR = 1e-5
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 MODEL_SAVE_PATH = "best_task_classifier_b0.pth"
 
-# =========================
-# 1. DATASET (Updated for Classification)
-# =========================
+# dataset
 class ProgressRegressionDataset(Dataset):
     def __init__(self, csv_file, transform=None):
         self.df = pd.read_csv(csv_file)
@@ -43,8 +38,8 @@ class ProgressRegressionDataset(Dataset):
         self.classes = sorted(self.df[self.target_col].unique())
         self.class_to_idx = {cls: i for i, cls in enumerate(self.classes)}
         
-        print(f"📊 Success! Training for {len(self.classes)} phases.")
-        print(f"📂 Phases identified: {self.classes}")
+        print(f" Success! Training for {len(self.classes)} phases.")
+        print(f" Phases identified: {self.classes}")
 
     def __len__(self):
         return len(self.df)
@@ -91,9 +86,7 @@ val_indices = full_dataset.df[full_dataset.df['unique_key'].isin(val_trial_ids)]
 train_loader = DataLoader(Subset(full_dataset, train_indices), batch_size=BATCH_SIZE, shuffle=True, num_workers=4)
 val_loader = DataLoader(Subset(full_dataset, val_indices), batch_size=BATCH_SIZE, shuffle=False, num_workers=4)
 
-# =========================
-# 2. MODEL SETUP (EfficientNet Classifier)
-# =========================
+# model set up effnet classifier
 model = models.efficientnet_b0(weights=models.EfficientNet_B0_Weights.DEFAULT)
 
 model.classifier = nn.Sequential(
@@ -106,9 +99,7 @@ model.classifier = nn.Sequential(
 model = model.to(DEVICE)
 criterion = nn.CrossEntropyLoss()
 
-# =========================
-# 3. TRAINING FUNCTION
-# =========================
+# training
 def run_epoch(optimizer, loader, is_train=True):
     if is_train: model.train()
     else: model.eval()
@@ -140,23 +131,21 @@ def run_epoch(optimizer, loader, is_train=True):
     
     return avg_loss, acc, prec, rec
 
-# =========================
-# 4. EXECUTION (Optimizers + Loop)
-# =========================
+# optimizers and loop
 best_val_loss = float('inf')
 total_epochs = PHASE1_EPOCHS + PHASE2_EPOCHS
 
-# Define Optimizers initially
+# define optimizers initially
 # PHASE 1: Head Only
 for param in model.features.parameters():
     param.requires_grad = False
 opt1 = optim.AdamW(model.classifier.parameters(), lr=PHASE1_LR)
 
-# PHASE 2: (Will be redefined/updated when unfreezing)
+# phase 2
 opt2 = optim.AdamW(model.parameters(), lr=PHASE2_LR)
 
-print(f"\n🚀 Starting Training on {DEVICE}")
-print(f"📊 Targets: {num_tasks} phases | Split: {len(train_trial_ids)} Train / {len(val_trial_ids)} Val trials")
+print(f"\n Starting Training on {DEVICE}")
+print(f" Targets: {num_tasks} phases | Split: {len(train_trial_ids)} Train / {len(val_trial_ids)} Val trials")
 
 for epoch in range(total_epochs):
     # Determine which optimizer and mode to use
@@ -166,7 +155,7 @@ for epoch in range(total_epochs):
     else:
         # Unfreeze backbone on the first iteration of Phase 2
         if epoch == PHASE1_EPOCHS:
-            print("\n🔥 Unfreezing backbone for Fine-Tuning...")
+            print("\n Unfreezing backbone for Fine-Tuning...")
             for param in model.parameters():
                 param.requires_grad = True
             # Refresh opt2 to include all model parameters now that they are unfrozen
@@ -195,6 +184,6 @@ for epoch in range(total_epochs):
             'val_loss': val_loss,
             'classes': full_dataset.classes
         }, MODEL_SAVE_PATH)
-        print(f"  ⭐ [SAVED] New best validation loss at Epoch {epoch+1}")
+        print(f"   [SAVED] New best validation loss at Epoch {epoch+1}")
     
     print("-" * 30)
