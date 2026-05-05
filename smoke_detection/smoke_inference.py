@@ -582,7 +582,7 @@ def main():
         save_comparison_report(all_results)
 
     print_benchmark_summary(all_results)
-    print("  Inference complete.\n")
+    print("Inference complete.\n")
 
 
 if __name__ == "__main__":
